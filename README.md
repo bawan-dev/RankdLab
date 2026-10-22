@@ -1,87 +1,102 @@
 # RankdLab
 
-### AI-Powered Rocket League Performance Analysis & Coaching
+An independent Rocket League replay coaching workspace built with React,
+TypeScript, Three.js and FastAPI. **Functional local development product;
+experimental coaching, not production or commercial signoff.**
 
-RankdLab is a Rocket League performance analysis platform designed to help competitive players identify mistakes, understand their decisions, and improve their gameplay through intelligent replay analysis.
+The original vision is preserved in [docs/VISION.md](docs/VISION.md).
 
-Instead of manually reviewing matches, players will be able to upload their Rocket League replay files and watch an automated coaching session that highlights important moments, explains potential mistakes, and suggests better decisions.
+## What works
 
-## Key Features (Planned)
+- Accounts with Argon2id passwords, opaque HttpOnly sessions and owner isolation.
+- Bounded `.replay` uploads, durable background processing and safe failure states.
+- Actual `subtr-actor-py` parsing: metadata, cars, ball, rotations, velocities,
+  boost, timestamps, clock and goals. Compatibility tested with genuine replays.
+- Original simplified 3D arena, interpolation, play/pause, seek, rewind, speed,
+  overhead/elevated/follow/aerial cameras and a deterministic coaching director.
+- Authored coaching moments, automatic pauses, context rewind, recorded/proposed
+  arrows, evidence, Continue, inaccurate-detection feedback and saved progress.
+- Three conservative versioned geometry detectors with positive/negative tests.
+- Stored reports, JSON export, browser print/PDF layout, history, time-normalized
+  trends, coaching goals, replay and account deletion.
+- SQLite locally, PostgreSQL configuration, Alembic migrations, CI/container
+  configuration and offline feature/label/baseline experimentation infrastructure.
 
-### 1. Intelligent Replay Analysis
-- Upload and process Rocket League `.replay` files.
-- Reconstruct matches in an interactive 3D tactical environment.
-- Track player positioning, movement, boost usage, and ball interactions.
-- Automatically identify potential gameplay mistakes.
+No trained coaching model, calibrated confidence probabilities, expert coaching
+validation or SSL-quality claim. The genuine doubles compatibility fixture has
+zero automatic flags at the current conservative thresholds; authored notes test
+the coaching experience on its real frames. No fake account metrics or seeded
+matches appear in the product.
 
-### 2. AI-Directed Coaching
-- Automatically control the replay camera to focus on important moments.
-- Pause gameplay when a potential mistake is detected.
-- Highlight player movements, positioning errors, and tactical decisions.
-- Display visual indicators and alternative movement paths.
-- Explain each mistake and allow players to continue when ready.
+## Start locally (Windows)
 
-### 3. Performance Analytics
-- Track goals, assists, saves, shots, and other match statistics.
-- Analyse player performance across multiple matches.
-- Compare statistics between wins and losses.
-- Visualise gameplay trends using interactive dashboards.
+Requires Python 3.11+ and Node 22.12+; tested with Python 3.11.5 / Node 24.13.0.
 
-### 4. Personalised Improvement Tracking
-- Generate detailed coaching reports after each match.
-- Store historical mistakes and coaching recommendations.
-- Identify recurring weaknesses across multiple games.
-- Monitor improvements over time.
-- Recommend areas to focus on during future matches.
+```powershell
+cd C:\Code\RankdLab
+python -m venv backend\.venv
+backend\.venv\Scripts\python -m pip install -e "backend[dev,ml]"
+backend\.venv\Scripts\python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
-### 5. Machine Learning
-- Develop models to detect patterns in player behaviour.
-- Classify potential mistakes using replay data.
-- Improve coaching recommendations through labelled examples and player feedback.
-- Evaluate model accuracy using real gameplay data.
+In a second terminal:
 
-## Planned Technology Stack
+```powershell
+cd C:\Code\RankdLab\frontend
+npm.cmd ci
+npm.cmd run dev
+```
 
-| Technology | Purpose |
-|---|---|
-| Python | Data processing and gameplay analysis |
-| TypeScript | Frontend development |
-| React | User interface |
-| Three.js | 3D replay visualisation |
-| FastAPI | Backend API |
-| PostgreSQL | Player statistics and coaching history |
-| scikit-learn | Machine learning |
-| Docker | Application containerisation |
-| GitHub Actions | Automated testing and CI/CD |
+Open **http://127.0.0.1:5173** and create a local account. There are no seeded
+credentials. Development startup applies migrations; local data stays in ignored
+`data/`. On Linux/macOS use `backend/.venv/bin/python` and `npm`.
 
-The technology stack may evolve as development progresses.
+For the locked environment, `uv sync --project backend --frozen --extra dev
+--extra ml` replaces the venv/pip setup above. See [development commands](docs/DEVELOPMENT.md).
 
-## Development Roadmap
+## Verification
 
-- [ ] Phase 1 — Project setup and replay data processing
-- [ ] Phase 2 — Interactive 3D replay viewer
-- [ ] Phase 3 — Automated camera movement and coaching presentation
-- [ ] Phase 4 — Rule-based mistake detection
-- [ ] Phase 5 — Player profiles, match reports, and performance history
-- [ ] Phase 6 — Machine learning and personalised coaching
-- [ ] Phase 7 — Testing, security, optimisation, and deployment
+```powershell
+python scripts/fetch-test-replay.py --all
+backend\.venv\Scripts\python -m pytest backend/tests
+backend\.venv\Scripts\ruff check backend/app backend/tests backend/migrations
+backend\.venv\Scripts\mypy --platform linux --config-file backend/pyproject.toml backend/app
+cd frontend
+npm.cmd run lint
+npm.cmd run format:check
+npm.cmd test
+npm.cmd run build
+npx.cmd playwright install chromium
+npm.cmd run test:e2e
+```
 
-## Project Goals
+See the exact executed results and remaining limits in
+[docs/VERIFICATION.md](docs/VERIFICATION.md). The E2E suite uses isolated 8001/5174
+servers and test data. Real fixture downloads are checksum-pinned and ignored.
 
-RankdLab aims to make replay analysis more accessible, interactive, and useful for competitive Rocket League players.
+## Repository map
 
-The long-term goal is to develop an intelligent coaching system capable of providing clear, evidence-based gameplay feedback and helping players measure their improvement over time.
+```text
+frontend/src/       UI, replay renderer, playback and coaching state
+frontend/e2e/       real upload-to-report browser checks
+backend/app/        API, authentication, jobs, parser adapter, rules, ML tools
+backend/migrations/ versioned database schema
+backend/tests/      scenarios, security, persistence and genuine compatibility
+scripts/            fixture downloader and PostgreSQL smoke check
+docs/               architecture, limitations, operations and ML/launch review
+```
 
-## Current Status
+## Remaining work
 
-**Early Development — Project Setup**
+Qualified coach evaluation, broader replay/arena coverage, additional tactical
+detectors, opportunity-based metrics, expert review tooling, real labelled data,
+validated models, account recovery/email verification, load/security testing and
+production monitoring are incomplete. Docker daemon execution and PostgreSQL
+runtime checks were unavailable locally; CI has been written but not remotely run.
 
-RankdLab is currently in development. Features described above are planned and are not yet available.
+Read [implementation plan](docs/IMPLEMENTATION.md), [replay contracts](docs/REPLAY_ENGINE.md),
+[ML roadmap](docs/ML.md), [operations](docs/OPERATIONS.md) and [launch review](docs/LEGAL.md).
+No code has been pushed or publicly deployed, and billing is not enabled.
 
-The initial focus is building a reliable replay-processing foundation before introducing automated coaching and machine learning.
-
-## Disclaimer
-
-RankdLab is an independent, unofficial project and is not affiliated with or endorsed by Psyonix or Epic Games.
-
-Rocket League and associated trademarks belong to their respective owners.
+RankdLab is not affiliated with or endorsed by Psyonix or Epic Games. Rocket League
+and its trademarks belong to their respective owners.
