@@ -109,6 +109,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             with engine.begin() as connection:
                 alembic.attributes["connection"] = connection
                 command.upgrade(alembic, "head")
+        else:
+            from alembic.config import Config
+            from alembic.script import ScriptDirectory
+
+            alembic = Config(str(ROOT / "backend" / "alembic.ini"))
+            alembic.set_main_option("script_location", str(ROOT / "backend" / "migrations"))
+            expected = ScriptDirectory.from_config(alembic).get_current_head()
+            with engine.connect() as connection:
+                actual = connection.execute(
+                    text("SELECT version_num FROM alembic_version")
+                ).scalar()
+            if actual != expected:
+                raise RuntimeError("Database migration required before starting the API")
         worker = ReplayWorker(sessions, config)
         application.state.worker = worker
         if config.start_worker:
@@ -185,6 +198,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @application.get("/api/health")
     def health(db: Db):
         db.execute(text("SELECT 1"))
+        if config.start_worker and not application.state.worker.thread.is_alive():
+            raise HTTPException(503, "Replay worker is unavailable")
         return {"status": "ok", "version": "0.1.0"}
 
     @application.post("/api/auth/register", status_code=201)
@@ -253,7 +268,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if (
             not filename.lower().endswith(".replay")
             or len(filename) > 180
-            or any(c in filename for c in ("/", "\\", "\x00"))
+            or any(c in filename for c in ("/", "\\", "\x00", ":"))
+            or any(ord(c) < 32 for c in filename)
         ):
             raise HTTPException(422, "Choose a valid .replay filename (up to 180 characters)")
         if file.content_type not in ("application/octet-stream", "application/x-replay", ""):
@@ -555,7 +571,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         directory = config.data_dir / "replays" / replay_id
         if directory.resolve().parent != (config.data_dir / "replays").resolve():
             raise RuntimeError("Invalid storage path")
-        shutil.rmtree(directory, ignore_errors=True)
+        try:
+            shutil.rmtree(directory)
+        except FileNotFoundError:
+            pass
 
     @application.delete("/api/replays/{replay_id}", status_code=204)
     def delete_replay(replay_id: str, user: Owner, db: Db):
@@ -569,9 +588,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if changed is None:
             db.rollback()
             raise HTTPException(409, "Wait for processing to finish before deleting")
+        db.commit()
+        try:
+            remove_files(replay.id)
+        except OSError:
+            replay.status = "failed"
+            replay.error = "File removal failed. Retry deletion; your replay record is retained."
+            db.commit()
+            logging.getLogger("rankdlab.api").exception("replay_deletion_failed")
+            raise HTTPException(503, replay.error) from None
         db.delete(replay)
         db.commit()
-        remove_files(replay.id)
 
     @application.delete("/api/profile", status_code=204)
     def delete_profile(user: Owner, db: Db, response: Response):
@@ -584,11 +611,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if any(r.status == "processing" for r in items):
             db.rollback()
             raise HTTPException(409, "Wait for processing to finish before deleting your account")
-        ids = [r.id for r in items]
+        for replay in items:
+            replay.status = "deleting"
+        db.commit()
+        try:
+            for replay in items:
+                remove_files(replay.id)
+        except OSError:
+            for replay in items:
+                replay.status = "failed"
+                replay.error = "Account file removal was interrupted. Retry deleting your account."
+            db.commit()
+            logging.getLogger("rankdlab.api").exception("account_deletion_failed")
+            raise HTTPException(
+                503, "File removal failed. Your account remains available; retry deletion."
+            ) from None
         db.delete(user)
         db.commit()
-        for replay_id in ids:
-            remove_files(replay_id)
         response.delete_cookie(COOKIE, path="/api")
 
     return application

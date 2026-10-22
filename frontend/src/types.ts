@@ -30,6 +30,7 @@ export type Metadata = {
   source_time_offset: number;
   players: Player[];
   score: (number | null)[];
+  initial_score?: (number | null)[];
   goals: Goal[];
 };
 export type Finding = {
@@ -51,7 +52,7 @@ export type Finding = {
 export type Replay = {
   id: string;
   filename: string;
-  status: "queued" | "processing" | "ready" | "failed";
+  status: "queued" | "processing" | "ready" | "failed" | "deleting";
   error: string | null;
   created_at: number;
   metadata: Partial<Metadata>;

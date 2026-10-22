@@ -57,4 +57,10 @@ The current rule thresholds emitted zero automatic findings on this fixture.
 This is a compatibility result, not evidence of detector sensitivity or coaching
 quality. Authored notes exercise coaching presentation on the same real frames.
 
+Additional checksum-pinned standard and duel fixtures are available via
+`python scripts/fetch-test-replay.py --all`; their native parsing and movement
+are covered by compatibility tests. Active duration means the time between
+contiguous frames explicitly marked `Active` in the replay. Initial score is
+inferred from recorded goal events, and absent score metadata remains unknown.
+
 No claim of compatibility with every replay version, custom arena or game mode.

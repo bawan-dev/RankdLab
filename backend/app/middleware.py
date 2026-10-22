@@ -3,6 +3,7 @@ import logging
 import time
 import uuid
 
+from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
 logger = logging.getLogger("rankdlab.http")
@@ -19,8 +20,9 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(entry)
 
 
-class BodyTooLarge(Exception):
-    pass
+class BodyTooLarge(HTTPException):
+    def __init__(self):
+        super().__init__(status_code=413, detail="Request exceeds upload limit")
 
 
 class RequestGuard:
@@ -32,6 +34,9 @@ class RequestGuard:
             return await self.app(scope, receive, send)
         headers = dict(scope["headers"])
         method = scope["method"]
+        limit = (
+            self.max_bytes if method == "POST" and scope["path"] == "/api/replays" else 64 * 1024
+        )
         if method in ("POST", "PUT", "PATCH", "DELETE"):
             origin = headers.get(b"origin", b"").decode()
             if headers.get(b"x-requested-with") != b"RankdLab" or (
@@ -46,7 +51,7 @@ class RequestGuard:
             return await JSONResponse({"detail": "Invalid content length"}, 400)(
                 scope, receive, send
             )
-        if content_length > self.max_bytes:
+        if content_length > limit:
             return await JSONResponse({"detail": "Request exceeds upload limit"}, 413)(
                 scope, receive, send
             )
@@ -56,7 +61,7 @@ class RequestGuard:
             nonlocal consumed
             message = await receive()
             consumed += len(message.get("body", b""))
-            if consumed > self.max_bytes:
+            if consumed > limit:
                 raise BodyTooLarge
             return message
 

@@ -105,6 +105,15 @@ def normalize(raw: dict, names: list[str], game_type: str) -> dict:
         }
         for g in raw.get("goal_events", [])
     ]
+    final_score = [headers.get("Team0Score"), headers.get("Team1Score")]
+    initial_score: list[int | None] = [None, None]
+    if goals:
+        initial_score = list(goals[0]["score"])
+        team = goals[0]["team"]
+        if initial_score[team] is not None:
+            initial_score[team] = max(0, initial_score[team] - 1)
+    elif final_score == [0, 0]:
+        initial_score = [0, 0]
     return {
         "schema_version": 1,
         "parser_version": PARSER_VERSION,
@@ -112,7 +121,8 @@ def normalize(raw: dict, names: list[str], game_type: str) -> dict:
             "title": headers.get("ReplayName") or "Rocket League replay",
             "map": headers.get("MapName"),
             "date": headers.get("Date"),
-            "score": [headers.get("Team0Score"), headers.get("Team1Score")],
+            "score": final_score,
+            "initial_score": initial_score,
             "duration": duration,
             "source_time_offset": origin,
             "frame_count": len(frames),

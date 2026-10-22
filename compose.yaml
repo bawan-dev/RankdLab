@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: rankdlab
+      POSTGRES_USER: rankdlab
+      POSTGRES_PASSWORD: ${RANKDLAB_DB_PASSWORD:?Set RANKDLAB_DB_PASSWORD in .env}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U rankdlab -d rankdlab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  api:
+    build: {context: ., dockerfile: backend/Dockerfile}
+    init: true
+    environment:
+      RANKDLAB_DATABASE_URL: postgresql+psycopg://rankdlab:${RANKDLAB_DB_PASSWORD}@db:5432/rankdlab
+      RANKDLAB_DATA_DIR: /data
+      RANKDLAB_ENVIRONMENT: ${RANKDLAB_ENVIRONMENT:-development}
+      RANKDLAB_ORIGINS: '["${RANKDLAB_WEB_ORIGIN:-http://127.0.0.1:8080}"]'
+      RANKDLAB_HOSTS: ${RANKDLAB_HOSTS:-["127.0.0.1","localhost"]}
+      RANKDLAB_SECURE_COOKIES: ${RANKDLAB_SECURE_COOKIES:-false}
+      OPENBLAS_NUM_THREADS: '1'
+    volumes: [replay_data:/data]
+    depends_on: {db: {condition: service_healthy}}
+    mem_limit: 3g
+    cpus: 2
+    pids_limit: 128
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    restart: unless-stopped
+  web:
+    build: {context: ., dockerfile: frontend/Dockerfile}
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on: {api: {condition: service_healthy}}
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  replay_data:

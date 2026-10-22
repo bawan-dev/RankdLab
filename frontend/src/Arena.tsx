@@ -267,13 +267,14 @@ export default function Arena(props: Props) {
               1,
             ),
           );
-        const end = path.at(-1);
-        if (end && end.distanceTo(start) > 0.1) {
-          const delta = end.clone().sub(start);
+        const end = path.at(-1),
+          tail = path.at(-5);
+        if (end && tail && end.distanceTo(tail) > 0.1) {
+          const delta = end.clone().sub(tail);
           annotations.add(
             new THREE.ArrowHelper(
               delta.clone().normalize(),
-              start,
+              tail,
               delta.length(),
               "#ff6b7d",
               1.5,
@@ -340,6 +341,17 @@ export default function Arena(props: Props) {
           label.position
             .copy(sample.position)
             .add(new THREE.Vector3(0, 3.1, 0));
+          const unitsPerPixel =
+            (2 *
+              camera.position.distanceTo(label.position) *
+              Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) /
+            Math.max(1, host.clientHeight);
+          const width = id === playerId ? 115 : 95;
+          label.scale.set(
+            width * unitsPerPixel,
+            (width / 8) * unitsPerPixel,
+            1,
+          );
         }
       }
       const selected = cars.get(playerId);
@@ -382,7 +394,10 @@ export default function Arena(props: Props) {
           target.copy(subject.position).add(ball.position).multiplyScalar(0.5);
         position.copy(target).add(new THREE.Vector3(55, 90, 60));
       }
-      const easing = 1 - Math.exp(-elapsed * 4);
+      const easing = window.matchMedia("(prefers-reduced-motion: reduce)")
+        .matches
+        ? 1
+        : 1 - Math.exp(-elapsed * 4);
       camera.position.lerp(position, easing);
       look.lerp(target, easing);
       camera.lookAt(look);

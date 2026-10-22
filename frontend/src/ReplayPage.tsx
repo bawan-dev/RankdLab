@@ -49,7 +49,8 @@ export default function ReplayPage() {
         if (value.status === "ready") {
           const frames = await api<ReplayData>(`/replays/${id}/frames`);
           if (!cancelled) setData(frames);
-        } else if (value.status !== "failed") timer = setTimeout(load, 1500);
+        } else if (value.status !== "failed" && value.status !== "deleting")
+          timer = setTimeout(load, 1500);
       } catch (error) {
         if (!cancelled) setError(message(error));
       }
@@ -84,11 +85,14 @@ export default function ReplayPage() {
         />
         <ErrorMessage error={error} />
         <div className="panel processing-panel">
-          {replay.status === "failed" ? (
+          {replay.status === "failed" || replay.status === "deleting" ? (
             <>
               <Flag size={32} />
               <h2>We couldn’t reconstruct this replay.</h2>
-              <p>{replay.error}</p>
+              <p>
+                {replay.error ??
+                  "A deletion was interrupted. Retry removing this replay."}
+              </p>
               <Link className="button primary" to="/upload">
                 Choose another replay <ArrowRight size={16} />
               </Link>
@@ -116,6 +120,33 @@ export default function ReplayPage() {
                 <span>Review</span>
               </div>
             </>
+          )}
+          {replay.status !== "processing" && (
+            <div
+              className="actions"
+              style={{ justifyContent: "center", marginTop: 24 }}
+            >
+              {confirmDelete ? (
+                <>
+                  <button className="button danger" onClick={remove}>
+                    Confirm delete replay
+                  </button>
+                  <button
+                    className="button subtle"
+                    onClick={() => setConfirmDelete(false)}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="text-link danger-text"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 size={13} /> Delete replay
+                </button>
+              )}
+            </div>
           )}
         </div>
       </>
@@ -187,6 +218,10 @@ function CoachingViewer({
         [],
     );
   const [autoPause, setAutoPause] = useState(true);
+  const noteDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (manual) noteDialog.current?.showModal();
+  }, [manual]);
   const timeRef = useRef(time),
     coachRef = useRef(coach),
     viewer = useRef<HTMLDivElement>(null);
@@ -202,7 +237,8 @@ function CoachingViewer({
   const frame = data.frames[frameIndex(data.frames, time)];
   const score = [...data.metadata.goals]
     .reverse()
-    .find((goal) => goal.time <= time)?.score ?? [0, 0];
+    .find((goal) => goal.time <= time)?.score ??
+    data.metadata.initial_score ?? [null, null];
   useEffect(() => {
     timeRef.current = time;
     coachRef.current = coach;
@@ -740,63 +776,51 @@ function CoachingViewer({
         </div>
       )}
       {manual && (
-        <div className="modal-backdrop">
-          <section
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="note-title"
+        <dialog
+          ref={noteDialog}
+          className="modal"
+          aria-labelledby="note-title"
+          onCancel={() => setManual(false)}
+        >
+          <button
+            className="modal-close"
+            aria-label="Close review note"
+            onClick={() => setManual(false)}
           >
-            <button
-              className="modal-close"
-              aria-label="Close review note"
-              onClick={() => setManual(false)}
-            >
-              <X size={20} />
+            <X size={20} />
+          </button>
+          <form onSubmit={addManual}>
+            <p className="eyebrow">
+              MANUALLY AUTHORED MOMENT · {formatTime(time)}
+            </p>
+            <h2 id="note-title">What deserves another look?</h2>
+            <p>
+              Your note will pause the replay and show a suggested retreat arrow
+              toward your own half.
+            </p>
+            <label>
+              Title
+              <input
+                name="title"
+                required
+                maxLength={100}
+                autoFocus
+                placeholder="e.g. Revisit this challenge"
+              />
+            </label>
+            <label>
+              Observed situation
+              <textarea name="explanation" required maxLength={1500} rows={3} />
+            </label>
+            <label>
+              Proposed alternative
+              <textarea name="alternative" required maxLength={1000} rows={3} />
+            </label>
+            <button className="button primary">
+              Save review moment <Plus size={16} />
             </button>
-            <form onSubmit={addManual}>
-              <p className="eyebrow">
-                MANUALLY AUTHORED MOMENT · {formatTime(time)}
-              </p>
-              <h2 id="note-title">What deserves another look?</h2>
-              <p>
-                Your note will pause the replay and show a suggested retreat
-                arrow toward your own half.
-              </p>
-              <label>
-                Title
-                <input
-                  name="title"
-                  required
-                  maxLength={100}
-                  autoFocus
-                  placeholder="e.g. Revisit this challenge"
-                />
-              </label>
-              <label>
-                Observed situation
-                <textarea
-                  name="explanation"
-                  required
-                  maxLength={1500}
-                  rows={3}
-                />
-              </label>
-              <label>
-                Proposed alternative
-                <textarea
-                  name="alternative"
-                  required
-                  maxLength={1000}
-                  rows={3}
-                />
-              </label>
-              <button className="button primary">
-                Save review moment <Plus size={16} />
-              </button>
-            </form>
-          </section>
-        </div>
+          </form>
+        </dialog>
       )}
     </>
   );

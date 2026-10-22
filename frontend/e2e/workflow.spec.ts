@@ -73,6 +73,7 @@ test('real replay upload, playback, coaching, feedback, report and deletion', as
   await page.getByRole('link',{name:'Back to replay'}).click();
   await expect(canvas).toBeVisible();
   await page.setViewportSize({width:390,height:844});
+  await expect.poll(() => page.locator('.sidebar').evaluate(element => element.getBoundingClientRect().right)).toBeLessThanOrEqual(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   await page.screenshot({path:resolve(artifact,'viewer-mobile.png'),fullPage:true});
   await page.getByRole('button',{name:'Delete replay',exact:true}).click();
@@ -90,4 +91,7 @@ test('empty and corrupted uploads have actionable failures', async ({page}) => {
   await page.getByRole('button',{name:'Upload & process'}).click();
   await expect(page.getByRole('heading',{name:'We couldn’t reconstruct this replay.'})).toBeVisible({timeout:45000});
   await expect(page.getByText(/Use an intact Soccar/)).toBeVisible();
+  await page.getByRole('button',{name:'Delete replay',exact:true}).click();
+  await page.getByRole('button',{name:'Confirm delete replay'}).click();
+  await expect(page.getByRole('heading',{name:'Replay library',exact:true})).toBeVisible();
 });

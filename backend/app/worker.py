@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import subprocess
 import sys
 import threading
@@ -15,11 +16,14 @@ logger = logging.getLogger("rankdlab.worker")
 
 def run_parser(source: Path, target: Path, timeout: int) -> dict:
     # Fixed argument vector; never execute a filename or interpolate shell commands.
+    environment = os.environ.copy()
+    environment.update(OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1")
     result = subprocess.run(
         [sys.executable, "-m", "app.parse", str(source), str(target)],
         timeout=timeout,
         capture_output=True,
         shell=False,
+        env=environment,
     )
     if result.returncode or not target.exists() or target.stat().st_size > 160 * 1024**2:
         raise ValueError("Corrupted, unsupported or oversized replay data")

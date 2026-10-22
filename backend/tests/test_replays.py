@@ -51,6 +51,29 @@ def test_subprocess_timeout(monkeypatch, tmp_path):
         run_parser(tmp_path / "x.replay", tmp_path / "frames.json", 1)
 
 
+def test_file_deletion_failure_is_retryable(authenticated, application, monkeypatch):
+    replay_id = authenticated.post(
+        "/api/replays",
+        files={"file": ("test.replay", b"invalid" * 100, "application/octet-stream")},
+    ).json()["id"]
+    import app.api
+
+    original = app.api.shutil.rmtree
+
+    def denied(*args, **kwargs):
+        raise PermissionError("Simulated storage failure")
+
+    monkeypatch.setattr(app.api.shutil, "rmtree", denied)
+    response = authenticated.delete(f"/api/replays/{replay_id}")
+    assert response.status_code == 503
+    assert authenticated.get(f"/api/replays/{replay_id}").json()["status"] == "failed"
+    assert authenticated.delete("/api/profile").status_code == 503
+    assert authenticated.get("/api/auth/me").status_code == 200
+    monkeypatch.setattr(app.api.shutil, "rmtree", original)
+    assert authenticated.delete("/api/profile").status_code == 204
+    assert not (application.state.settings.data_dir / "replays" / replay_id).exists()
+
+
 def test_real_replay_pipeline(authenticated, application, genuine_replay):
     # This test executes the actual native parser; no mocked replay movement.
     response = authenticated.post(
@@ -70,6 +93,7 @@ def test_real_replay_pipeline(authenticated, application, genuine_replay):
     assert result["metadata"]["active_seconds"] > 250
     data = authenticated.get(f"/api/replays/{replay_id}/frames").json()
     assert data["frames"][0]["time"] == 0
+    assert data["metadata"]["initial_score"] == [0, 0]
     assert data["frames"][-1]["time"] == result["metadata"]["duration"]
     assert data["frames"][0]["ball"]["position"] == {"x": 0, "y": 0, "z": 92.75}
     assert data["frames"][0]["source_time"] == data["metadata"]["source_time_offset"]

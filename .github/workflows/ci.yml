@@ -1,0 +1,82 @@
+name: RankdLab checks
+on: [push, pull_request]
+permissions: { contents: read }
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with: { python-version: '3.11' }
+      - run: python -m pip install uv==0.13.0
+      - run: uv sync --project backend --frozen --extra dev --extra ml
+      - run: python scripts/fetch-test-replay.py --all
+      - run: uv run --project backend --no-sync pytest backend/tests
+      - run: uv run --project backend --no-sync ruff check --config backend/pyproject.toml backend/app backend/tests backend/migrations scripts
+      - run: uv run --project backend --no-sync ruff format --check --config backend/pyproject.toml backend/app backend/tests backend/migrations scripts
+      - run: uv run --project backend --no-sync mypy --config-file backend/pyproject.toml backend/app
+      - run: uv export --project backend --frozen --no-dev --no-emit-project --output-file /tmp/requirements.lock && diff -I '^#' backend/requirements.lock /tmp/requirements.lock
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with: { node-version: '24', cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run lint && npm run format:check && npm test && npm run build && npm audit
+        working-directory: frontend
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with: { node-version: '24', cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with: { python-version: '3.11' }
+      - run: python -m pip install uv==0.13.0 && uv sync --project backend --frozen --extra dev
+      - run: python scripts/fetch-test-replay.py
+      - run: npm ci && npx playwright install --with-deps chromium && npm run test:e2e
+        working-directory: frontend
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with: { name: browser-artifacts, path: 'frontend/test-results', retention-days: 7 }
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env: { POSTGRES_USER: ci, POSTGRES_PASSWORD: disposable-ci-only, POSTGRES_DB: rankdlab_test }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U ci -d rankdlab_test" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      RANKDLAB_DATABASE_URL: postgresql+psycopg://ci:disposable-ci-only@localhost:5432/rankdlab_test
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with: { python-version: '3.11' }
+      - run: python -m pip install --require-hashes -r backend/requirements.lock && python -m pip install --no-deps -e backend
+      - run: alembic -c backend/alembic.ini upgrade head && alembic -c backend/alembic.ini check
+      - run: python scripts/check-postgres.py
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env: { RANKDLAB_DB_PASSWORD: disposable-local-ci-only }
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: { persist-credentials: false }
+      - run: docker compose config --quiet && docker compose build && docker compose up --wait
+      - run: curl --fail http://127.0.0.1:8080/healthz && curl --fail http://127.0.0.1:8080/api/health
+      - if: always()
+        run: docker compose logs --no-color && docker compose down

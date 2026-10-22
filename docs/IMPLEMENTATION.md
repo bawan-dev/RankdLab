@@ -57,3 +57,16 @@ Primary sources:
 
 Implemented the monorepo, React shell, API health endpoint and check commands.
 Verification results and later milestone status are recorded in VERIFICATION.md.
+
+## Delivered checkpoints
+
+- `978aeb9`: Milestone 1 foundation, verified and committed.
+- `43d42fd`: Integrated replay/viewer, authored coaching, three rule detectors,
+  persistent accounts/history/reports and local security (Milestones 2–5).
+- `9ed9c12`: Milestone 6 data/feature/offline baseline infrastructure. No validated
+  model enabled; expert labels and production evaluation remain outstanding.
+- Milestone 7 adds reproducible lockfiles, CI, containers, migration/security tests
+  and runbooks. Local container/PostgreSQL execution and remote CI remain unverified.
+
+The full commercial production objective is not complete. See OPERATIONS.md,
+ML.md and LEGAL.md for explicit unfinished work and launch requirements.

@@ -33,6 +33,9 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B"]
 ignore = ["B008"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
 [tool.mypy]
 python_version = "3.11"
 check_untyped_defs = true

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from alembic import context
 from sqlalchemy import create_engine
 
@@ -24,5 +26,11 @@ elif config.attributes.get("connection") is not None:
     run(config.attributes["connection"])
 else:
     engine = create_engine(Settings().database_url)
+    if (
+        engine.dialect.name == "sqlite"
+        and engine.url.database
+        and engine.url.database != ":memory:"
+    ):
+        Path(engine.url.database).parent.mkdir(parents=True, exist_ok=True)
     with engine.connect() as connection:
         run(connection)

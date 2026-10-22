@@ -1,4 +1,14 @@
 @import "tailwindcss";
+dialog.modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  color: #e9eef7;
+}
+dialog.modal::backdrop {
+  background: #03070cce;
+  backdrop-filter: blur(4px);
+}
 @theme {
   --font-sans: "Inter", "Segoe UI", sans-serif;
 }
