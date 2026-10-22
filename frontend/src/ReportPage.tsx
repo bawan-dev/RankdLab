@@ -4,16 +4,18 @@ import {
   Download,
   FileJson,
   Flag,
+  Lightbulb,
   Play,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, message } from "./api";
-import type { Finding, Metadata, Player } from "./types";
+import type { Finding, Metadata, Player, Replay } from "./types";
 import { formatTime } from "./time";
 import { ErrorMessage, Loading, PageHeader } from "./ui";
 
 type Report = {
+  coaching_context?: Replay["coaching_context"];
   replay_id: string;
   filename: string;
   metadata: Metadata;
@@ -23,6 +25,7 @@ type Report = {
   priorities: string[];
   active_seconds: number;
   engine_version: string;
+  coverage?: { team_rules_supported: boolean; message: string };
   feedback: { finding_id: string; inaccurate: boolean }[];
 };
 
@@ -54,6 +57,7 @@ export default function ReportPage() {
     return error ? (
       <>
         <ErrorMessage error={error} />
+
         <Link to={`/replays/${id}`} className="button subtle">
           Open replay and select your player <ArrowUpRight size={16} />
         </Link>
@@ -83,6 +87,23 @@ export default function ReportPage() {
         }
       />
       <ErrorMessage error={error} />
+      <section className="report-context panel">
+        <div>
+          <span className="eyebrow">CONTEXT AT ANALYSIS</span>
+          <h3>
+            {report.coaching_context?.playlist ??
+              report.metadata.classification?.format ??
+              "Legacy report"}{" "}
+            / {report.coaching_context?.rank?.rank ?? "Rank not recorded"}
+          </h3>
+          <p>
+            {report.coaching_context?.rank
+              ? "Self-reported rank snapshot. Later rank edits do not change this report."
+              : "No rank was captured for this analysis. Existing results are preserved."}
+          </p>
+        </div>
+        <span className="badge">{report.engine_version}</span>
+      </section>
       <section className="report-match panel">
         <div>
           <p className="eyebrow">SELECTED PLAYER</p>
@@ -141,9 +162,14 @@ export default function ReportPage() {
             probabilities. Raw counts include disputed findings; see their
             feedback labels below.
           </p>
+          {report.coverage && (
+            <p className="muted small">{report.coverage.message}</p>
+          )}
         </section>
       </div>
-      <section className="panel">
+      <section
+        className={`panel report-timeline ${report.findings.length ? "" : "report-timeline-empty"}`}
+      >
         <div className="panel-header">
           <div>
             <h2>Decision timeline</h2>
@@ -177,6 +203,11 @@ export default function ReportPage() {
                   )}
                 </div>
                 <p>{finding.explanation}</p>
+                {finding.coaching && (
+                  <p className="coaching-guidance">
+                    {finding.coaching.guidance}
+                  </p>
+                )}
                 <p className="proposed">
                   <strong>Proposed alternative:</strong> {finding.alternative}
                 </p>
@@ -206,12 +237,23 @@ export default function ReportPage() {
             </article>
           ))}
           {!report.findings.length && (
-            <div className="empty-state">
-              <h2>No qualifying situations were flagged.</h2>
-              <p>
-                The current detector coverage is limited. This is not proof of
-                mistake-free play.
-              </p>
+            <div className="report-review-next">
+              <div className="report-review-icon" aria-hidden="true">
+                <Lightbulb size={24} />
+              </div>
+              <div>
+                <span className="eyebrow">YOUR NEXT REVIEW</span>
+                <h3>No qualifying situations were flagged.</h3>
+                <p>
+                  These experimental detectors look for a limited set of
+                  patterns. They cannot tell you whether the whole match was
+                  mistake-free. Choose a challenge, recovery or rotation you
+                  want to inspect, then add a review note at that moment.
+                </p>
+              </div>
+              <Link className="button primary no-print" to={`/replays/${id}`}>
+                <Play size={16} /> Review the replay
+              </Link>
             </div>
           )}
         </div>

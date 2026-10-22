@@ -36,6 +36,45 @@ export function interpolate(
   return { position, rotation, boost: a.boost };
 }
 
+// Keep trajectory lines on recorded, continuous segments; never bridge a demolition,
+// missing packet, goal reset or teleport with a fabricated line of movement.
+export function recordedSegments(
+  frames: Frame[],
+  start: number,
+  end: number,
+  playerId?: string,
+): Vec3[][] {
+  const segments: Vec3[][] = [];
+  let segment: Vec3[] = [],
+    previous: Frame | null = null;
+  for (const frame of frames) {
+    if (frame.time < start) continue;
+    if (frame.time > end) break;
+    const actor = playerId ? frame.players[playerId] : frame.ball;
+    const last = segment.at(-1);
+    if (
+      !actor ||
+      (previous &&
+        (frame.time - previous.time >= 0.25 ||
+          frame.state !== previous.state)) ||
+      (actor &&
+        last &&
+        Math.hypot(
+          actor.position.x - last.x,
+          actor.position.y - last.y,
+          actor.position.z - last.z,
+        ) >= 1800)
+    ) {
+      if (segment.length > 1) segments.push(segment);
+      segment = [];
+    }
+    if (actor) segment.push(actor.position);
+    previous = frame;
+  }
+  if (segment.length > 1) segments.push(segment);
+  return segments;
+}
+
 export type CoachingState = {
   phase: "watching" | "framing" | "review" | "context";
   activeId: string | null;

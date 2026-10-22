@@ -4,6 +4,7 @@ import {
   frameIndex,
   interpolate,
   nextMoment,
+  recordedSegments,
   toRotation,
   toWorld,
 } from "./playback";
@@ -13,6 +14,35 @@ const actor = (x: number): Actor => ({
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   velocity: null,
   boost: 33,
+});
+
+test("recorded trajectories split missing samples, resets, gaps and teleports", () => {
+  const frames: Frame[] = [
+    0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 1, 1.1, 1.2, 1.3,
+  ].map((time, i) => ({
+    time,
+    source_time: time,
+    seconds_remaining: null,
+    state: "Active",
+    ball: actor(i * 10),
+    players: { a: actor(i * 10) },
+  }));
+  frames[2].players.a = null;
+  frames[5].state = "PostGoalScored";
+  frames[6].state = "PostGoalScored";
+  frames[10].players.a = actor(5000);
+  frames[11].players.a = actor(5010);
+  const paths = recordedSegments(frames, 0, 2, "a");
+  expect(paths.map((p) => p.map((v) => v.x))).toEqual([
+    [0, 10],
+    [30, 40],
+    [50, 60],
+    [80, 90],
+    [5000, 5010],
+  ]);
+  expect(
+    recordedSegments(frames, 0, 0.1).map((p) => p.map((v) => v.x)),
+  ).toEqual([[0, 10]]);
 });
 describe("native replay adapter", () => {
   test("maps Unreal Z-up coordinates and rotations", () => {

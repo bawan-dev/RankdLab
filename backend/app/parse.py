@@ -1,13 +1,12 @@
 """Isolated entrypoint. Never import native replay code in the HTTP process."""
 
 import json
-import os
 import sys
 from pathlib import Path
 
 
 def main():
-    if os.name != "nt":
+    if sys.platform != "win32":
         import resource  # type: ignore
 
         resource.setrlimit(resource.RLIMIT_AS, (2 * 1024**3, 2 * 1024**3))

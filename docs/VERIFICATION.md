@@ -1,5 +1,25 @@
 # Verification ledger
 
+## Coaching detection investigation — 2026-10-22
+
+See [DETECTION_INVESTIGATION.md](DETECTION_INVESTIGATION.md) for the root cause,
+per-replay/category counts, player identity verification, frame coverage and
+precise rejection evidence. All three public fixtures and all nine private
+DemosEpic files were parsed and audited. No detector thresholds were changed.
+
+- **35 pytest tests passed**, including optional private genuine-match detection,
+  audit/result equivalence, full-frame accounting, structured logs, explicit duel
+  skip and unsupported-mode report messaging. One upstream httpx warning remains.
+- **6 Vitest tests passed**; **4 Chromium E2E tests passed (33.7s)**, including a
+  genuine automatic finding driving pause, director camera, scene annotations,
+  context replay, Continue and saved progress. No manual/fake event in that test.
+- Ruff lint/format, mypy, ESLint, TypeScript/Vite production build passed.
+- New jobs persist analysis-diagnostics.json and emit structured rejection counts.
+  Existing findings and the user's selected-player/session records were preserved.
+- Report UI now explains team-only coverage and unsupported 1v1 coaching explicitly.
+  No coordinate/identity/truncation bug was found explaining the zero personal count.
+- Private replay files and audit output remain local and ignored. No push/deploy.
+
 Milestone results are appended only after commands actually execute.
 
 ## Foundation — 2026-10-22
@@ -83,3 +103,24 @@ removed. Failed/corrupt replays now also have working UI deletion controls.
   syntax parsed successfully. No remote CI, container execution or public deploy.
 - Preview servers were used for verification and stopped during handoff; use the
   README commands to start the app. Screenshots remain in `.research/screenshots/`.
+
+## Milestone 3 interrupted-run handoff — 2026-10-23
+
+Astra's interrupted checkpoint was reviewed against the uploaded source ZIP.
+The following checks were **re-run** after targeted fixes in a Linux handoff
+environment, not asserted from a previous assistant's report:
+
+- **47 pytest passed, 4 skipped** (native replay fixtures unavailable in the
+  Linux runtime). Includes an added SQLite migration-preservation smoke test.
+- **TypeScript `tsc -b` passed**, fixing a genuine previously failing test-frame
+  type assertion.
+- **ESLint and Prettier source checks passed**.
+- Existing SQLite DB (inspected read-only from a disposable extracted copy) was
+  already at the `m3_profiles` revision and had account/replay records present.
+- Frontend browser E2E, Vite bundling, Vitest and native replay parser execution
+  remain **unverified** in this runtime: Windows-native optional Node packages
+  and the Windows-only replay-parser binding were not runnable. Re-run on Windows.
+- Original uploaded ZIP and user database were not modified; deliverable ZIP
+  excludes local data, secrets and generated dependency directories.
+
+See [MILESTONE3_HANDOFF.md](MILESTONE3_HANDOFF.md).

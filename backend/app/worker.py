@@ -8,8 +8,10 @@ from pathlib import Path
 
 from sqlalchemy import select, update
 
-from app.analysis import analyse
+from app.analysis import VERSION, analyse
+from app.coaching import snapshot
 from app.database import Replay, now
+from app.playlists import replay_format
 
 logger = logging.getLogger("rankdlab.worker")
 
@@ -85,13 +87,21 @@ class ReplayWorker:
         target = directory / "frames.json"
         try:
             data = run_parser(directory / "source.replay", target, self.settings.parser_timeout)
-            findings, active_seconds = analyse(data, candidate)
+            diagnostics: dict = {}
+            findings, active_seconds = analyse(data, candidate, diagnostics)
+            (directory / "analysis-diagnostics.json").write_text(
+                json.dumps(diagnostics, indent=2), encoding="utf-8"
+            )
             data["metadata"]["active_seconds"] = active_seconds
             with self.sessions() as db:
                 replay = db.get(Replay, candidate)
                 if replay:
                     replay.metadata_json = data["metadata"]
                     replay.findings = findings
+                    replay.engine_version = VERSION
+                    replay.coaching_context = snapshot(
+                        db, replay.user_id, replay_format(replay), replay.id
+                    )
                     replay.status = "ready"
                     db.commit()
             logger.info("replay_ready", extra={"replay_id": candidate})

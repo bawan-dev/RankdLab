@@ -1,3 +1,4 @@
+import type { Rank } from "./Profile";
 export type Vec3 = { x: number; y: number; z: number };
 export type Rotation = Vec3 & { w: number };
 export type Actor = {
@@ -22,6 +23,14 @@ export type Player = {
 };
 export type Goal = { time: number; team: number; score: (number | null)[] };
 export type Metadata = {
+  classification?: {
+    format: string | null;
+    source: string;
+    ranked: boolean | null;
+    message: string;
+    team_counts: number[];
+  };
+  active_seconds?: number;
   title: string;
   map: string | null;
   date: string | null;
@@ -34,6 +43,15 @@ export type Metadata = {
   goals: Goal[];
 };
 export type Finding = {
+  coaching?: {
+    guidance: string;
+    presentation_level: string;
+    rank?: Rank | null;
+    prior_category_findings: number;
+    playlist: string;
+    context_version: string;
+    note: string;
+  };
   id: string;
   replay_id: string;
   player_id: string;
@@ -53,6 +71,16 @@ export type Replay = {
   id: string;
   filename: string;
   status: "queued" | "processing" | "ready" | "failed" | "deleting";
+  mode_confirmation_required?: boolean;
+  requested_playlist?: string | null;
+  coaching_context?: {
+    rank?: Rank | null;
+    playlist?: string;
+    presentation_level?: string;
+    history?: Record<string, number>;
+    captured_at?: number;
+    version?: string;
+  };
   error: string | null;
   created_at: number;
   metadata: Partial<Metadata>;

@@ -4,7 +4,12 @@ import pytest
 
 from app.analysis import DefensiveBunching, DoubleCommit, ExposedGoal, analyse
 
-PLAYERS = [{"id": "a", "team": 0}, {"id": "b", "team": 0}, {"id": "c", "team": 1}]
+PLAYERS = [
+    {"id": "a", "team": 0},
+    {"id": "b", "team": 0},
+    {"id": "c", "team": 1},
+    {"id": "d", "team": 1},
+]
 
 
 def actor(x, y, z=20, vx=0, vy=0):
@@ -85,8 +90,9 @@ def data_for(frame, seconds=10):
     for i in range(int(seconds * 30)):
         copy = deepcopy(frame)
         copy["time"] = i / 30
+        copy["players"].setdefault("d", actor(3500, 4000))
         frames.append(copy)
-    return {"metadata": {"players": PLAYERS}, "frames": frames}
+    return {"metadata": {"players": deepcopy(PLAYERS)}, "frames": frames}
 
 
 def test_sustain_cooldown_kickoff_and_provenance():

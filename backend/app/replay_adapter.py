@@ -5,6 +5,8 @@ import json
 import math
 from typing import Any
 
+from app.playlists import classify
+
 PARSER_VERSION = "subtr-actor-py/1.5.1"
 
 
@@ -118,6 +120,10 @@ def normalize(raw: dict, names: list[str], game_type: str) -> dict:
         "schema_version": 1,
         "parser_version": PARSER_VERSION,
         "metadata": {
+            "classification": classify({"players": players}, headers),
+            "team_size": headers.get("TeamSize"),
+            "match_type": headers.get("MatchType"),
+            "playlist_metadata": headers.get("Playlist"),
             "title": headers.get("ReplayName") or "Rocket League replay",
             "map": headers.get("MapName"),
             "date": headers.get("Date"),

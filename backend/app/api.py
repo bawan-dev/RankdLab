@@ -15,12 +15,27 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import FileResponse, JSONResponse
 
-from app.analysis import RELIABILITY, priorities, retreat_target
+from app.analysis import RELIABILITY, VERSION, analyse, priorities, retreat_target
+from app.coaching import present, snapshot
 from app.config import ROOT, Settings
-from app.database import Base, Feedback, LoginSession, Replay, ReviewLabel, User, connect, now, uid
+from app.database import (
+    Base,
+    Feedback,
+    LoginSession,
+    RankRecord,
+    Replay,
+    ReviewLabel,
+    RocketProfile,
+    User,
+    connect,
+    now,
+    uid,
+)
 from app.features import VERSION as FEATURE_VERSION
 from app.features import extract_features
 from app.middleware import RequestGuard
+from app.playlists import classify, needs_confirmation, replay_format
+from app.profiles import Playlist, RankInput, RocketProfileInput, rank_dict
 from app.security import COOKIE, DUMMY_HASH, RateLimiter, new_token, passwords, token_hash
 from app.worker import ReplayWorker
 
@@ -35,7 +50,8 @@ class Registration(Credentials):
 
 
 class ProfileUpdate(BaseModel):
-    coaching_goal: str = Field(max_length=500)
+    coaching_goal: str | None = Field(default=None, max_length=500)
+    display_name: str | None = Field(default=None, min_length=1, max_length=60, pattern=r".*\S.*")
 
 
 class SessionUpdate(BaseModel):
@@ -80,12 +96,20 @@ def replay_dict(replay: Replay):
         "status": replay.status,
         "error": replay.error,
         "created_at": replay.created_at,
-        "metadata": replay.metadata_json,
-        "findings": replay.findings,
+        "metadata": {
+            **replay.metadata_json,
+            "classification": replay.metadata_json.get(
+                "classification", classify(replay.metadata_json)
+            ),
+        },
+        "findings": present(replay.findings, replay.coaching_context),
         "selected_player": replay.selected_player,
         "session_time": replay.session_time,
         "reviewed_ids": replay.reviewed_ids,
         "engine_version": replay.engine_version,
+        "coaching_context": replay.coaching_context,
+        "requested_playlist": replay.requested_playlist,
+        "mode_confirmation_required": replay.status == "ready" and needs_confirmation(replay),
     }
 
 
@@ -248,9 +272,50 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.put("/api/profile")
     def profile(payload: ProfileUpdate, user: Owner, db: Db):
-        user.coaching_goal = payload.coaching_goal.strip()
+        if payload.coaching_goal is not None:
+            user.coaching_goal = payload.coaching_goal.strip()
+        if payload.display_name is not None:
+            user.display_name = payload.display_name.strip()
         db.commit()
         return user_dict(user)
+
+    @application.get("/api/rocket-league/profile")
+    def rocket_profile(user: Owner, db: Db):
+        profile = db.get(RocketProfile, user.id)
+        records = list(
+            db.scalars(
+                select(RankRecord)
+                .where(RankRecord.user_id == user.id)
+                .order_by(RankRecord.created_at.desc(), RankRecord.id.desc())
+            )
+        )
+        ranks: dict = {}
+        for record in records:
+            ranks.setdefault(record.playlist, rank_dict(record))
+        return {
+            "display_name": profile.display_name if profile else "",
+            "platform": profile.platform if profile else "",
+            "onboarding_complete": profile.onboarding_complete if profile else False,
+            "ranks": ranks,
+            "history": [rank_dict(r) for r in records],
+        }
+
+    @application.put("/api/rocket-league/profile")
+    def update_rocket_profile(payload: RocketProfileInput, user: Owner, db: Db):
+        profile = db.get(RocketProfile, user.id) or RocketProfile(user_id=user.id)
+        profile.display_name = payload.display_name.strip()
+        profile.platform = payload.platform
+        profile.onboarding_complete = payload.onboarding_complete
+        db.add(profile)
+        db.commit()
+        return rocket_profile(user, db)
+
+    @application.put("/api/rocket-league/ranks/{playlist}")
+    def update_rank(playlist: Playlist, payload: RankInput, user: Owner, db: Db):
+        record = RankRecord(user_id=user.id, playlist=playlist, **payload.model_dump())
+        db.add(record)
+        db.commit()
+        return rank_dict(record)
 
     @application.get("/api/replays")
     def replays(user: Owner, db: Db):
@@ -262,7 +327,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ]
 
     @application.post("/api/replays", status_code=202)
-    async def upload(user: Owner, db: Db, file: UploadFile = File(...)):
+    async def upload(
+        user: Owner, db: Db, file: UploadFile = File(...), playlist: Playlist | None = None
+    ):
         limiter.check(f"upload:{user.id}", 10, 3600)
         filename = file.filename or ""
         if (
@@ -304,7 +371,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     target.write(chunk)
             if size < 64:
                 raise HTTPException(422, "Replay is empty or too short to be valid")
-            replay = Replay(id=replay_id, user_id=user.id, filename=filename)
+            replay = Replay(
+                id=replay_id, user_id=user.id, filename=filename, requested_playlist=playlist
+            )
             db.add(replay)
             db.commit()
             return replay_dict(replay)
@@ -333,9 +402,50 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             config.data_dir / "replays" / replay.id / "frames.json", media_type="application/json"
         )
 
+    @application.put("/api/replays/{replay_id}/mode")
+    def confirm_mode(replay_id: str, playlist: Playlist, user: Owner, db: Db):
+        replay = owned(replay_id, user, db)
+        if replay.status != "ready":
+            raise HTTPException(409, "Wait for replay processing")
+        detected = replay_format(replay)
+        if detected and detected != playlist:
+            raise HTTPException(422, f"Replay roster supports {detected}, not {playlist}")
+        if not detected:
+            metadata = {
+                **replay.metadata_json,
+                "classification": {
+                    **classify(replay.metadata_json),
+                    "format": playlist,
+                    "source": "user-confirmed",
+                    "ranked": None,
+                    "message": "Coaching format confirmed by account owner; ranked status unknown.",
+                },
+            }
+            replay.metadata_json = metadata
+            data = json.loads(
+                (config.data_dir / "replays" / replay.id / "frames.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            data["metadata"] = metadata
+            diagnostics: dict = {}
+            findings, seconds = analyse(data, replay.id, diagnostics)
+            replay.findings = [f for f in replay.findings if f["source"] == "manual"] + findings
+            replay.metadata_json = {**metadata, "active_seconds": seconds}
+            replay.engine_version = VERSION
+            replay.coaching_context = snapshot(db, user.id, playlist, replay.id)
+            (config.data_dir / "replays" / replay.id / "analysis-diagnostics.json").write_text(
+                json.dumps(diagnostics, indent=2), encoding="utf-8"
+            )
+        replay.requested_playlist = playlist
+        db.commit()
+        return replay_dict(replay)
+
     @application.put("/api/replays/{replay_id}/session")
     def save_session(replay_id: str, payload: SessionUpdate, user: Owner, db: Db):
         replay = owned(replay_id, user, db)
+        if needs_confirmation(replay):
+            raise HTTPException(409, "Confirm the replay coaching format first")
         if payload.player_id not in [p["id"] for p in replay.metadata_json.get("players", [])]:
             raise HTTPException(422, "Choose a player from this replay")
         if payload.time > replay.metadata_json.get("duration", 0):
@@ -416,10 +526,41 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         player = next(
             p for p in replay.metadata_json["players"] if p["id"] == replay.selected_player
         )
-        findings = [f for f in replay.findings if f["player_id"] == replay.selected_player]
+        findings = present(
+            [f for f in replay.findings if f["player_id"] == replay.selected_player],
+            replay.coaching_context,
+        )
         common, recommendations = priorities(findings)
+        team_supported = any(
+            p["id"] != player["id"] and p["team"] == player["team"]
+            for p in replay.metadata_json["players"]
+        )
+        coverage_message = (
+            "Only three experimental team-positioning rules are checked. Zero flags does not "
+            "mean mistake-free play; mechanics, boost routes and many tactical decisions "
+            "are not assessed."
+            if team_supported
+            else "Automatic duel coaching is not supported: all current rules require a teammate. "
+            "Zero flags here indicates a coverage gap, not an assessment of your decisions."
+        )
+        if replay.engine_version == VERSION:
+            mode = replay_format(replay)
+            coverage_message = (
+                "Experimental duel exposure geometry only. Challenges, possession, boost decisions "
+                "and mechanics are not assessed. Zero flags does not mean mistake-free play."
+                if mode == "1v1"
+                else "Three experimental team rules. Rotation intent, challenge sequencing, "
+                "boost and mechanics are not assessed. Zero flags does not mean mistake-free play."
+            )
+        elif not team_supported:
+            recommendations = [coverage_message]
+        limit = {"foundational": 1, "standard": 2, "advanced": 3}.get(
+            replay.coaching_context.get("presentation_level", "standard"), 3
+        )
+        recommendations = recommendations[:limit]
         return {
-            "schema_version": 1,
+            "schema_version": 2,
+            "coaching_context": replay.coaching_context,
             "replay_id": replay.id,
             "filename": replay.filename,
             "metadata": replay.metadata_json,
@@ -430,6 +571,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "active_seconds": replay.metadata_json.get("active_seconds", 0),
             "engine_version": replay.engine_version,
             "reliability": RELIABILITY,
+            "coverage": {"team_rules_supported": team_supported, "message": coverage_message},
             "feedback": [
                 {"finding_id": f.finding_id, "inaccurate": f.inaccurate, "note": f.note}
                 for f in db.scalars(select(Feedback).where(Feedback.replay_id == replay.id))
@@ -437,7 +579,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     @application.get("/api/analytics")
-    def analytics(user: Owner, db: Db):
+    def analytics(user: Owner, db: Db, playlist: Playlist | None = None):
         matches = list(
             db.scalars(
                 select(Replay)
@@ -449,6 +591,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 .order_by(Replay.created_at.desc())
             )
         )
+        if playlist:
+            matches = [r for r in matches if replay_format(r) == playlist]
         counts: Counter = Counter()
         seconds = 0.0
         for replay in matches:
@@ -471,6 +615,44 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return count / duration * 300 if duration else None
 
         return {
+            "sessions": [
+                {
+                    "id": r.id,
+                    "date": r.created_at,
+                    "playlist": replay_format(r),
+                    "filename": r.filename,
+                    "rate": rate([r]),
+                    "active_seconds": r.metadata_json.get("active_seconds", 0),
+                    "reviewed": len(
+                        {f["id"] for f in r.findings if f["player_id"] == r.selected_player}
+                        & set(r.reviewed_ids)
+                    ),
+                    "findings": sum(
+                        f["source"] == "rule" and f["player_id"] == r.selected_player
+                        for f in r.findings
+                    ),
+                    "engine_version": r.engine_version,
+                    "coaching_context": r.coaching_context,
+                }
+                for r in matches
+            ],
+            "feedback": [
+                {
+                    "replay_id": f.replay_id,
+                    "finding_id": f.finding_id,
+                    "note": f.note,
+                    "inaccurate": f.inaccurate,
+                }
+                for f in db.scalars(
+                    select(Feedback).where(Feedback.replay_id.in_([r.id for r in matches]))
+                )
+                if any(
+                    e["id"] == f.finding_id and e["player_id"] == r.selected_player
+                    for r in matches
+                    if r.id == f.replay_id
+                    for e in r.findings
+                )
+            ],
             "matches": len(matches),
             "minutes": seconds / 60,
             "findings": sum(counts.values()),

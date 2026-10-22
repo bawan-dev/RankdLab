@@ -35,6 +35,7 @@ export default function ReplayPage() {
     [data, setData] = useState<ReplayData | null>(null),
     [error, setError] = useState(""),
     [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmingMode, setConfirmingMode] = useState(false);
   useEffect(() => {
     let cancelled = false,
       timer: ReturnType<typeof setTimeout>;
@@ -150,6 +151,58 @@ export default function ReplayPage() {
           )}
         </div>
       </>
+    );
+  if (replay.mode_confirmation_required)
+    return (
+      <section className="panel mode-confirm">
+        <p className="eyebrow">CHECK THE MATCH FORMAT</p>
+        <h2>
+          {replay.metadata.classification?.format
+            ? "This replay belongs to a different mode."
+            : "Confirm the coaching format."}
+        </h2>
+        <p>
+          {replay.metadata.classification?.message}{" "}
+          {replay.requested_playlist
+            ? `You uploaded from ${replay.requested_playlist}.`
+            : ""}{" "}
+          Recorded team counts:{" "}
+          {replay.metadata.classification?.team_counts.join(" / ")}.
+        </p>
+        <ErrorMessage error={error} />
+        <div className="actions">
+          {(replay.metadata.classification?.format
+            ? [replay.metadata.classification.format]
+            : ["1v1", "2v2", "3v3"]
+          ).map((mode) => (
+            <button
+              key={mode}
+              disabled={confirmingMode}
+              className="button primary"
+              onClick={async () => {
+                setConfirmingMode(true);
+                try {
+                  setReplay(
+                    await api<Replay>(
+                      `/replays/${replay.id}/mode?playlist=${mode}`,
+                      { method: "PUT" },
+                    ),
+                  );
+                } catch (e) {
+                  setError(message(e));
+                } finally {
+                  setConfirmingMode(false);
+                }
+              }}
+            >
+              Use {mode} coach
+            </button>
+          ))}
+        </div>
+        <Link className="text-link" to="/upload">
+          Upload another match
+        </Link>
+      </section>
     );
   return (
     <>
@@ -325,9 +378,9 @@ function CoachingViewer({
     setSaved(false);
   }
   function review(finding: Finding) {
-    setPlaying(false);
-    seek(finding.time);
-    setCoach({ ...coach, phase: "framing", activeId: finding.id });
+    seek(finding.time - 3);
+    setCoach({ ...coach, phase: "context", activeId: finding.id });
+    setPlaying(true);
   }
   function proceed() {
     const next = continueCoaching(coach);
@@ -569,6 +622,13 @@ function CoachingViewer({
               </div>
             </div>
             <div className="viewer-toolbar">
+              <span className="camera-state" aria-live="polite">
+                {camera === "director"
+                  ? active
+                    ? "Director / challenge view"
+                    : "Director / following play"
+                  : `Manual / ${camera}`}
+              </span>
               <label>
                 Camera{" "}
                 <select
@@ -669,6 +729,20 @@ function CoachingViewer({
                 </div>
                 <h2>{active.title}</h2>
                 <p className="coaching-explanation">{active.explanation}</p>
+                {active.coaching && (
+                  <div className="coaching-guidance">
+                    <span className="eyebrow">
+                      YOUR REVIEW FOCUS / {active.coaching.presentation_level}
+                    </span>
+                    <p>{active.coaching.guidance}</p>
+                    <small>
+                      {active.coaching.rank?.rank ?? "Rank not set"} /
+                      Self-reported at analysis /{" "}
+                      {active.coaching.prior_category_findings} prior
+                      observations for this player and playlist
+                    </small>
+                  </div>
+                )}
                 <div className="alternative-box">
                   <span className="eyebrow">PROPOSED ALTERNATIVE</span>
                   <p>{active.alternative}</p>
