@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Check, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Check, ChevronRight } from "lucide-react";
 import { api, message } from "./api";
 import { rocketLeague } from "./game";
 import type { Playlist } from "./game";
@@ -214,7 +214,6 @@ export default function ProfilePage({
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [saved, setSaved] = useState(false);
-  const navigate = useNavigate();
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -232,7 +231,6 @@ export default function ProfilePage({
         }),
       );
       setSaved(true);
-      if (onboarding) navigate("/dashboard");
     } catch (e) {
       setError(message(e));
     } finally {
@@ -273,6 +271,22 @@ export default function ProfilePage({
         !loadError && <Loading />
       ) : (
         <>
+          {onboarding && (
+            <div
+              className="profile-onboarding-steps"
+              aria-label="Profile setup steps"
+            >
+              <span>
+                <strong>01</strong> Add player details
+              </span>
+              <span>
+                <strong>02</strong> Choose your playlist ranks
+              </span>
+              <span>
+                <strong>03</strong> Start coaching
+              </span>
+            </div>
+          )}
           <form onSubmit={save} className="profile-basics panel">
             <label>
               Rocket League display username
@@ -293,10 +307,10 @@ export default function ProfilePage({
               </select>
             </label>
             <button className="button primary" disabled={busy}>
-              {onboarding
-                ? "Finish setup"
-                : saved
-                  ? "Profile saved"
+              {saved
+                ? "Player details saved"
+                : onboarding
+                  ? "Save player details"
                   : "Save profile"}
             </button>
           </form>
@@ -310,6 +324,37 @@ export default function ProfilePage({
               />
             ))}
           </div>
+          {onboarding && (
+            <section
+              className="onboarding-finish panel"
+              aria-label="Complete profile setup"
+            >
+              <div>
+                <span className="eyebrow">READY WHEN YOU ARE</span>
+                <h2>Every playlist. Your pace.</h2>
+                <p>
+                  Ranks are optional. Save any ranks you want the coach to
+                  consider, then enter your workspace. You can change them
+                  later.
+                </p>
+                {!saved && !profile.onboarding_complete && (
+                  <p className="onboarding-hint">
+                    Save your player details above to complete setup, or skip
+                    for now.
+                  </p>
+                )}
+              </div>
+              {profile.onboarding_complete ? (
+                <Link className="button primary" to="/dashboard">
+                  Go to dashboard <ArrowRight size={16} />
+                </Link>
+              ) : (
+                <Link className="button subtle" to="/dashboard">
+                  Skip for now <ChevronRight size={16} />
+                </Link>
+              )}
+            </section>
+          )}
           {!onboarding && (
             <section className="panel rank-history">
               <div className="panel-header">

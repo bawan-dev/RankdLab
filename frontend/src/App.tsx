@@ -23,6 +23,7 @@ import {
   Route,
   Routes,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 import { api, message } from "./api";
 import { AuthProvider, useAuth } from "./auth";
@@ -172,7 +173,33 @@ function AuthPage({ register = false }: { register?: boolean }) {
 
 function Workspace() {
   const { user, loading, setUser } = useAuth(),
-    navigate = useNavigate();
+    navigate = useNavigate(),
+    location = useLocation();
+  const activeSection = location.pathname.startsWith("/coach/1v1")
+    ? "1v1 Duel"
+    : location.pathname.startsWith("/coach/2v2")
+      ? "2v2 Doubles"
+      : location.pathname.startsWith("/coach/3v3")
+        ? "3v3 Standard"
+        : location.pathname.startsWith("/replays/") &&
+            location.pathname.endsWith("/report")
+          ? "Match report"
+          : location.pathname.startsWith("/replays/")
+            ? "Replay viewer"
+            : location.pathname === "/dashboard"
+              ? "Dashboard"
+              : location.pathname === "/history"
+                ? "Replay library"
+                : location.pathname === "/analytics"
+                  ? "Improvement history"
+                  : location.pathname === "/upload"
+                    ? "Upload replay"
+                    : location.pathname.includes("onboarding") ||
+                        location.pathname.includes("profile")
+                      ? "Player profile"
+                      : location.pathname === "/settings"
+                        ? "Settings"
+                        : "Rocket League coaching";
   const [open, setOpen] = useState(false),
     [error, setError] = useState("");
   if (loading) return <Loading />;
@@ -255,7 +282,7 @@ function Workspace() {
         <div className="topbar">
           <span>
             WORKSPACE <ChevronRight size={12} />{" "}
-            <strong>Replay coaching</strong>
+            <strong>{activeSection}</strong>
           </span>
           <span className="status-indicator">
             <span className="live-dot" /> DEVELOPMENT PREVIEW

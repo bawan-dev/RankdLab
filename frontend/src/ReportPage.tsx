@@ -4,6 +4,7 @@ import {
   Download,
   FileJson,
   Flag,
+  Lightbulb,
   Play,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -166,7 +167,9 @@ export default function ReportPage() {
           )}
         </section>
       </div>
-      <section className="panel">
+      <section
+        className={`panel report-timeline ${report.findings.length ? "" : "report-timeline-empty"}`}
+      >
         <div className="panel-header">
           <div>
             <h2>Decision timeline</h2>
@@ -234,12 +237,23 @@ export default function ReportPage() {
             </article>
           ))}
           {!report.findings.length && (
-            <div className="empty-state">
-              <h2>No qualifying situations were flagged.</h2>
-              <p>
-                The current detector coverage is limited. This is not proof of
-                mistake-free play.
-              </p>
+            <div className="report-review-next">
+              <div className="report-review-icon" aria-hidden="true">
+                <Lightbulb size={24} />
+              </div>
+              <div>
+                <span className="eyebrow">YOUR NEXT REVIEW</span>
+                <h3>No qualifying situations were flagged.</h3>
+                <p>
+                  These experimental detectors look for a limited set of
+                  patterns. They cannot tell you whether the whole match was
+                  mistake-free. Choose a challenge, recovery or rotation you
+                  want to inspect, then add a review note at that moment.
+                </p>
+              </div>
+              <Link className="button primary no-print" to={`/replays/${id}`}>
+                <Play size={16} /> Review the replay
+              </Link>
             </div>
           )}
         </div>

@@ -103,3 +103,24 @@ removed. Failed/corrupt replays now also have working UI deletion controls.
   syntax parsed successfully. No remote CI, container execution or public deploy.
 - Preview servers were used for verification and stopped during handoff; use the
   README commands to start the app. Screenshots remain in `.research/screenshots/`.
+
+## Milestone 3 interrupted-run handoff — 2026-10-23
+
+Astra's interrupted checkpoint was reviewed against the uploaded source ZIP.
+The following checks were **re-run** after targeted fixes in a Linux handoff
+environment, not asserted from a previous assistant's report:
+
+- **47 pytest passed, 4 skipped** (native replay fixtures unavailable in the
+  Linux runtime). Includes an added SQLite migration-preservation smoke test.
+- **TypeScript `tsc -b` passed**, fixing a genuine previously failing test-frame
+  type assertion.
+- **ESLint and Prettier source checks passed**.
+- Existing SQLite DB (inspected read-only from a disposable extracted copy) was
+  already at the `m3_profiles` revision and had account/replay records present.
+- Frontend browser E2E, Vite bundling, Vitest and native replay parser execution
+  remain **unverified** in this runtime: Windows-native optional Node packages
+  and the Windows-only replay-parser binding were not runnable. Re-run on Windows.
+- Original uploaded ZIP and user database were not modified; deliverable ZIP
+  excludes local data, secrets and generated dependency directories.
+
+See [MILESTONE3_HANDOFF.md](MILESTONE3_HANDOFF.md).

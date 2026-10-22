@@ -1363,3 +1363,111 @@ p {
     display: none;
   }
 }
+
+/* Milestone 3 polish: clear onboarding progression and useful empty analysis states. */
+.profile-onboarding-steps {
+  display: flex;
+  gap: 12px;
+  margin: 6px 0 20px;
+  flex-wrap: wrap;
+}
+.profile-onboarding-steps > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 190px;
+  padding: 13px 16px;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-1);
+}
+.profile-onboarding-steps strong {
+  color: var(--blue);
+  letter-spacing: 0.08em;
+}
+.onboarding-finish {
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  align-items: center;
+  margin: 26px 0;
+  padding: 25px 28px;
+  border-left: 3px solid var(--orange);
+}
+.onboarding-finish h2 {
+  font-size: 22px;
+  margin: 8px 0;
+}
+.onboarding-finish p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 580px;
+}
+.onboarding-hint {
+  color: #eac29a !important;
+}
+.onboarding-finish .button {
+  flex-shrink: 0;
+}
+.report-timeline-empty .panel-header {
+  border-bottom: 1px solid var(--line);
+}
+.report-review-next {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  padding: 32px;
+  background: linear-gradient(112deg, #122840 0%, #111e32 75%);
+}
+.report-review-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid #33617f;
+  border-radius: 14px;
+  color: var(--blue);
+  background: #153449;
+}
+.report-review-next h3 {
+  font-size: 18px;
+  margin: 6px 0 8px;
+}
+.report-review-next p {
+  max-width: 650px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.report-review-next .button {
+  white-space: nowrap;
+}
+@media (max-width: 850px) {
+  .onboarding-finish {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .report-review-next {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 22px;
+    gap: 16px;
+  }
+  .report-review-next .button {
+    grid-column: 1 / -1;
+    width: 100%;
+    justify-content: center;
+  }
+}
+@media (max-width: 480px) {
+  .report-review-next {
+    grid-template-columns: 1fr;
+  }
+  .report-review-icon {
+    width: 44px;
+    height: 44px;
+  }
+}

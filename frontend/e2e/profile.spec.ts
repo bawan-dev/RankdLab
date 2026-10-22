@@ -20,7 +20,11 @@ test('onboarding saves independent self-reported ranks and update history', asyn
   await doubles.getByRole('button',{name:'Grand Champion',exact:true}).click();
   await doubles.getByRole('button',{name:'Save 2v2 rank',exact:true}).click();
   await expect(doubles.getByRole('button',{name:'Saved 2v2 rank'})).toBeVisible();
-  await page.getByRole('button',{name:'Finish setup'}).click();
+  await expect(page.getByRole('link',{name:'Go to dashboard'})).toHaveCount(0);
+  await page.getByRole('button',{name:'Save player details'}).click();
+  await expect(page.getByRole('link',{name:'Go to dashboard'})).toBeVisible();
+  await page.getByRole('link',{name:'Go to dashboard'}).click();
+  await expect(page.getByRole('heading',{name:'Your game. A fresh perspective.'})).toBeVisible();
   await page.goto('/profile/rocket-league');
   await expect(page.getByLabel('Rocket League display username')).toHaveValue('Busiest');
   await expect(duel.getByRole('heading')).toHaveText('Gold II');

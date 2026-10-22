@@ -16,7 +16,8 @@ The original vision is preserved in [docs/VISION.md](docs/VISION.md).
   overhead/elevated/follow/aerial cameras and a deterministic coaching director.
 - Authored coaching moments, automatic pauses, context rewind, recorded/proposed
   arrows, evidence, Continue, inaccurate-detection feedback and saved progress.
-- Three conservative versioned geometry detectors with positive/negative tests.
+- Versioned experimental geometry detectors for team formats plus a conservative
+  duel exposure candidate; positive/negative scenarios do not establish coaching accuracy.
 - Stored reports, JSON export, browser print/PDF layout, history, time-normalized
   trends, coaching goals, replay and account deletion.
 - SQLite locally, PostgreSQL configuration, Alembic migrations, CI/container
@@ -71,7 +72,9 @@ npm.cmd run test:e2e
 ```
 
 See the exact executed results and remaining limits in
-[docs/VERIFICATION.md](docs/VERIFICATION.md). The E2E suite uses isolated 8001/5174
+[docs/VERIFICATION.md](docs/VERIFICATION.md). For the 2026-10-23 source
+handoff and Windows merge instructions, see
+[docs/MILESTONE3_HANDOFF.md](docs/MILESTONE3_HANDOFF.md). The E2E suite uses isolated 8001/5174
 servers and test data. Real fixture downloads are checksum-pinned and ignored.
 
 ## Repository map
