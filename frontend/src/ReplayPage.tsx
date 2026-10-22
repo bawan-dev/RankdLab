@@ -722,6 +722,7 @@ function CoachingViewer({
                 </div>
                 <h2>{active.title}</h2>
                 <p className="coaching-explanation">{active.explanation}</p>
+                {active.coaching && <div className="coaching-guidance"><span className="eyebrow">YOUR REVIEW FOCUS / {active.coaching.presentation_level}</span><p>{active.coaching.guidance}</p><small>{active.coaching.rank?.rank ?? "Rank not set"} / Self-reported at analysis / {active.coaching.prior_category_findings} prior observations for this player and playlist</small></div>}
                 <div className="alternative-box">
                   <span className="eyebrow">PROPOSED ALTERNATIVE</span>
                   <p>{active.alternative}</p>

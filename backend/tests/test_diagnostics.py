@@ -25,13 +25,13 @@ def test_diagnostics_do_not_change_findings_and_account_for_full_replay():
         assert sum(s["emitted"] for s in stats.values()) > 0
 
 
-def test_duel_skip_is_explicit():
+def test_duel_runs_only_its_own_detector():
     data = data_for(scenario())
     data["metadata"]["players"] = [data["metadata"]["players"][0], data["metadata"]["players"][2]]
     diagnostics = {}
     assert analyse(data, "duel", diagnostics)[0] == []
-    assert diagnostics["frames"]["player_without_teammate"] > 0
-    assert diagnostics["players"] == {}
+    assert diagnostics["detectors"] == ["duel_goal_exposure"]
+    assert all(set(stats) == {"duel_goal_exposure"} for stats in diagnostics["players"].values())
 
 
 def test_structured_log_retains_diagnostics():

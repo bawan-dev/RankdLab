@@ -8,8 +8,10 @@ from pathlib import Path
 
 from sqlalchemy import select, update
 
-from app.analysis import analyse
+from app.analysis import VERSION, analyse
+from app.coaching import snapshot
 from app.database import Replay, now
+from app.playlists import replay_format
 
 logger = logging.getLogger("rankdlab.worker")
 
@@ -96,6 +98,10 @@ class ReplayWorker:
                 if replay:
                     replay.metadata_json = data["metadata"]
                     replay.findings = findings
+                    replay.engine_version = VERSION
+                    replay.coaching_context = snapshot(
+                        db, replay.user_id, replay_format(replay), replay.id
+                    )
                     replay.status = "ready"
                     db.commit()
             logger.info("replay_ready", extra={"replay_id": candidate})

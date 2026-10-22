@@ -15,7 +15,8 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import FileResponse, JSONResponse
 
-from app.analysis import RELIABILITY, priorities, retreat_target
+from app.analysis import RELIABILITY, VERSION, analyse, priorities, retreat_target
+from app.coaching import present, snapshot
 from app.config import ROOT, Settings
 from app.database import (
     Base,
@@ -101,7 +102,7 @@ def replay_dict(replay: Replay):
                 "classification", classify(replay.metadata_json)
             ),
         },
-        "findings": replay.findings,
+        "findings": present(replay.findings, replay.coaching_context),
         "selected_player": replay.selected_player,
         "session_time": replay.session_time,
         "reviewed_ids": replay.reviewed_ids,
@@ -421,6 +422,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 },
             }
             replay.metadata_json = metadata
+            data = json.loads(
+                (config.data_dir / "replays" / replay.id / "frames.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            data["metadata"] = metadata
+            diagnostics: dict = {}
+            findings, seconds = analyse(data, replay.id, diagnostics)
+            replay.findings = [f for f in replay.findings if f["source"] == "manual"] + findings
+            replay.metadata_json = {**metadata, "active_seconds": seconds}
+            replay.engine_version = VERSION
+            replay.coaching_context = snapshot(db, user.id, playlist, replay.id)
+            (config.data_dir / "replays" / replay.id / "analysis-diagnostics.json").write_text(
+                json.dumps(diagnostics, indent=2), encoding="utf-8"
+            )
         replay.requested_playlist = playlist
         db.commit()
         return replay_dict(replay)
@@ -510,7 +526,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         player = next(
             p for p in replay.metadata_json["players"] if p["id"] == replay.selected_player
         )
-        findings = [f for f in replay.findings if f["player_id"] == replay.selected_player]
+        findings = present(
+            [f for f in replay.findings if f["player_id"] == replay.selected_player],
+            replay.coaching_context,
+        )
         common, recommendations = priorities(findings)
         team_supported = any(
             p["id"] != player["id"] and p["team"] == player["team"]
@@ -524,10 +543,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             else "Automatic duel coaching is not supported: all current rules require a teammate. "
             "Zero flags here indicates a coverage gap, not an assessment of your decisions."
         )
-        if not team_supported:
+        if replay.engine_version == VERSION:
+            mode = replay_format(replay)
+            coverage_message = (
+                "Experimental duel exposure geometry only. Challenges, possession, boost decisions "
+                "and mechanics are not assessed. Zero flags does not mean mistake-free play."
+                if mode == "1v1"
+                else "Three experimental team geometry rules. Rotation intent, challenge sequencing, "
+                "boost and mechanics are not assessed. Zero flags does not mean mistake-free play."
+            )
+        elif not team_supported:
             recommendations = [coverage_message]
+        limit = {"foundational": 1, "standard": 2, "advanced": 3}.get(
+            replay.coaching_context.get("presentation_level", "standard"), 3
+        )
+        recommendations = recommendations[:limit]
         return {
-            "schema_version": 1,
+            "schema_version": 2,
+            "coaching_context": replay.coaching_context,
             "replay_id": replay.id,
             "filename": replay.filename,
             "metadata": replay.metadata_json,

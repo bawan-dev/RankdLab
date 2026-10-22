@@ -11,7 +11,9 @@ import math
 from collections import Counter
 from typing import Protocol
 
-VERSION = "geometry-0.1.0"
+from app.playlists import classify
+
+VERSION = "geometry-0.2.0"
 RELIABILITY = "Experimental, uncalibrated heuristic; not evaluated by qualified coaches"
 
 
@@ -206,13 +208,77 @@ class ExposedGoal:
         }
 
 
+class DuelGoalExposure:
+    """A low, goalward ball behind the only defender with a nearby opponent.
+
+    Position for both players and ball, plus ball velocity, are mandatory.
+    A constant-velocity horizontal projection must intersect the goal mouth.
+    This is neither a shot simulation nor attribution of blame for an open net.
+    """
+
+    category = "duel_goal_exposure"
+    sustain = 0.9
+
+    def evaluate(self, frame, player, teammates, opponents, diagnostics=None):
+        if teammates or len(opponents) != 1:
+            return reject(diagnostics, "requires_exact_duel_roster")
+        ball = frame["ball"]
+        bp = ball["position"]
+        sp = frame["players"][player["id"]]["position"]
+        velocity = ball.get("velocity")
+        own = -1 if player["team"] == 0 else 1
+        if not velocity:
+            return reject(diagnostics, "missing_ball_velocity")
+        if (
+            own * velocity["y"] < 900
+            or not 500 < own * bp["y"] < 3500
+            or bp["z"] > 300
+            or abs(velocity["z"]) > 200
+        ):
+            return reject(diagnostics, "ball_not_low_goalward_threat")
+        if own * (bp["y"] - sp["y"]) <= 600:
+            return reject(diagnostics, "defender_still_goal_side_or_near_ball_depth")
+        projection_seconds = (own * 5120 - bp["y"]) / velocity["y"]
+        projected_x = bp["x"] + velocity["x"] * projection_seconds
+        if abs(projected_x) > 800:
+            return reject(diagnostics, "straight_projection_outside_goal_mouth")
+        opponent_distance = distance(opponents[0]["position"], bp)
+        if opponent_distance > 1600:
+            return reject(diagnostics, "no_nearby_opponent")
+        return {
+            "title": "The ball has passed your duel coverage",
+            "severity": "high",
+            "explanation": "A low ball was moving toward your goal behind your position, "
+            "with the opponent nearby. Its horizontal straight-line projection crossed the "
+            "goal mouth. This is potential exposure, not proof of a goal or a mistaken challenge.",
+            "alternative": "Review the preceding challenge and consider recovering toward the "
+            "central goal-side lane. Momentum, bounces and the next touch may change the route.",
+            "evidence": {
+                "ball_goalward_velocity_uu_s": own * velocity["y"],
+                "defender_gap_uu": own * (bp["y"] - sp["y"]),
+                "opponent_ball_distance_uu": opponent_distance,
+                "projected_goal_x_uu": projected_x,
+                "constant_velocity_projection_seconds": projection_seconds,
+            },
+        }
+
+
+# Existing team geometry stays unchanged. Registry determines eligibility, not rank.
 DETECTORS: list[Detector] = [DoubleCommit(), DefensiveBunching(), ExposedGoal()]
+PLAYLIST_DETECTORS: dict[str, list[Detector]] = {
+    "1v1": [DuelGoalExposure()],
+    "2v2": DETECTORS,
+    "3v3": [DefensiveBunching(), DoubleCommit(), ExposedGoal()],
+}
 
 
 def analyse(
     data: dict, replay_id: str, diagnostics: dict | None = None
 ) -> tuple[list[dict], float]:
     players = data["metadata"]["players"]
+    classification = data["metadata"].get("classification", classify(data["metadata"]))
+    playlist = classification.get("format")
+    detectors = PLAYLIST_DETECTORS.get(playlist, [])
     findings = []
     starts: dict[tuple[str, str], float] = {}
     cooldowns: dict[tuple[str, str], float] = {}
@@ -222,7 +288,12 @@ def analyse(
     last_sample = -1.0
     audit = diagnostics if diagnostics is not None else {}
     audit.update(
-        engine_version=VERSION, total_frames=len(data["frames"]), frames=Counter(), players={}
+        engine_version=VERSION,
+        playlist=playlist,
+        detectors=[d.category for d in detectors],
+        total_frames=len(data["frames"]),
+        frames=Counter(),
+        players={},
     )
     for frame in data["frames"]:
         time = frame["time"]
@@ -262,10 +333,11 @@ def analyse(
                 if p["id"] != player["id"] and p["team"] == player["team"]
             ]
             opponents = [frame["players"][p["id"]] for p in players if p["team"] != player["team"]]
-            if not teammates:
-                audit["frames"]["player_without_teammate"] += 1
+            expected = {"1v1": 1, "2v2": 2, "3v3": 3}.get(playlist)
+            if not expected or len(teammates) != expected - 1 or len(opponents) != expected:
+                audit["frames"]["unsupported_or_incomplete_roster"] += 1
                 continue
-            for detector in DETECTORS:
+            for detector in detectors:
                 key = player["id"], detector.category
                 stats = (
                     audit["players"]
@@ -312,6 +384,9 @@ def analyse(
                         "source": "rule",
                         "reliability": RELIABILITY,
                         "detector_version": VERSION,
+                        "playlist": playlist,
+                        "candidate_start": starts[key],
+                        "spatial_context": {"ball": frame["ball"], "players": frame["players"]},
                         "target": retreat_target(
                             frame["players"][player["id"]]["position"], player["team"]
                         ),
@@ -338,6 +413,7 @@ def priorities(findings: list[dict]) -> tuple[str | None, list[str]]:
         "potential_exposed_goal": (
             "Review recovery routes when the ball passes your defensive line."
         ),
+        "duel_goal_exposure": "Review recovery before a goalward ball passes you.",
     }
     return (
         counts.most_common(1)[0][0] if counts else None,

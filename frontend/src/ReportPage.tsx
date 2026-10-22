@@ -9,11 +9,12 @@ import {
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, message } from "./api";
-import type { Finding, Metadata, Player } from "./types";
+import type { Finding, Metadata, Player, Replay } from "./types";
 import { formatTime } from "./time";
 import { ErrorMessage, Loading, PageHeader } from "./ui";
 
 type Report = {
+  coaching_context?: Replay["coaching_context"];
   replay_id: string;
   filename: string;
   metadata: Metadata;
@@ -55,6 +56,7 @@ export default function ReportPage() {
     return error ? (
       <>
         <ErrorMessage error={error} />
+
         <Link to={`/replays/${id}`} className="button subtle">
           Open replay and select your player <ArrowUpRight size={16} />
         </Link>
@@ -84,6 +86,7 @@ export default function ReportPage() {
         }
       />
       <ErrorMessage error={error} />
+      <section className="report-context panel"><div><span className="eyebrow">CONTEXT AT ANALYSIS</span><h3>{report.coaching_context?.playlist ?? report.metadata.classification?.format ?? "Legacy report"} / {report.coaching_context?.rank?.rank ?? "Rank not recorded"}</h3><p>{report.coaching_context?.rank ? "Self-reported rank snapshot. Later rank edits do not change this report." : "No rank was captured for this analysis. Existing results are preserved."}</p></div><span className="badge">{report.engine_version}</span></section>
       <section className="report-match panel">
         <div>
           <p className="eyebrow">SELECTED PLAYER</p>
@@ -181,6 +184,7 @@ export default function ReportPage() {
                   )}
                 </div>
                 <p>{finding.explanation}</p>
+              {finding.coaching && <p className="coaching-guidance">{finding.coaching.guidance}</p>}
                 <p className="proposed">
                   <strong>Proposed alternative:</strong> {finding.alternative}
                 </p>
