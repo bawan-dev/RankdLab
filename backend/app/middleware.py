@@ -12,7 +12,15 @@ logger = logging.getLogger("rankdlab.http")
 class JsonFormatter(logging.Formatter):
     def format(self, record):
         entry = {"level": record.levelname, "logger": record.name, "message": record.getMessage()}
-        for key in ("request_id", "method", "path", "status", "duration_ms", "replay_id"):
+        for key in (
+            "request_id",
+            "method",
+            "path",
+            "status",
+            "duration_ms",
+            "replay_id",
+            "diagnostics",
+        ):
             if hasattr(record, key):
                 entry[key] = getattr(record, key)
         if record.exc_info:

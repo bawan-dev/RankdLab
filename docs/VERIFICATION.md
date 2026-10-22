@@ -1,5 +1,25 @@
 # Verification ledger
 
+## Coaching detection investigation — 2026-10-22
+
+See [DETECTION_INVESTIGATION.md](DETECTION_INVESTIGATION.md) for the root cause,
+per-replay/category counts, player identity verification, frame coverage and
+precise rejection evidence. All three public fixtures and all nine private
+DemosEpic files were parsed and audited. No detector thresholds were changed.
+
+- **35 pytest tests passed**, including optional private genuine-match detection,
+  audit/result equivalence, full-frame accounting, structured logs, explicit duel
+  skip and unsupported-mode report messaging. One upstream httpx warning remains.
+- **6 Vitest tests passed**; **4 Chromium E2E tests passed (33.7s)**, including a
+  genuine automatic finding driving pause, director camera, scene annotations,
+  context replay, Continue and saved progress. No manual/fake event in that test.
+- Ruff lint/format, mypy, ESLint, TypeScript/Vite production build passed.
+- New jobs persist analysis-diagnostics.json and emit structured rejection counts.
+  Existing findings and the user's selected-player/session records were preserved.
+- Report UI now explains team-only coverage and unsupported 1v1 coaching explicitly.
+  No coordinate/identity/truncation bug was found explaining the zero personal count.
+- Private replay files and audit output remain local and ignored. No push/deploy.
+
 Milestone results are appended only after commands actually execute.
 
 ## Foundation — 2026-10-22

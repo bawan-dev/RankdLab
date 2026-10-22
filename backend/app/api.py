@@ -418,6 +418,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         findings = [f for f in replay.findings if f["player_id"] == replay.selected_player]
         common, recommendations = priorities(findings)
+        team_supported = any(
+            p["id"] != player["id"] and p["team"] == player["team"]
+            for p in replay.metadata_json["players"]
+        )
+        coverage_message = (
+            "Only three experimental team-positioning rules are checked. Zero flags does not "
+            "mean mistake-free play; mechanics, boost routes and many tactical decisions "
+            "are not assessed."
+            if team_supported
+            else "Automatic duel coaching is not supported: all current rules require a teammate. "
+            "Zero flags here indicates a coverage gap, not an assessment of your decisions."
+        )
+        if not team_supported:
+            recommendations = [coverage_message]
         return {
             "schema_version": 1,
             "replay_id": replay.id,
@@ -430,6 +444,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "active_seconds": replay.metadata_json.get("active_seconds", 0),
             "engine_version": replay.engine_version,
             "reliability": RELIABILITY,
+            "coverage": {"team_rules_supported": team_supported, "message": coverage_message},
             "feedback": [
                 {"finding_id": f.finding_id, "inaccurate": f.inaccurate, "note": f.note}
                 for f in db.scalars(select(Feedback).where(Feedback.replay_id == replay.id))

@@ -23,6 +23,7 @@ type Report = {
   priorities: string[];
   active_seconds: number;
   engine_version: string;
+  coverage?: { team_rules_supported: boolean; message: string };
   feedback: { finding_id: string; inaccurate: boolean }[];
 };
 
@@ -141,6 +142,9 @@ export default function ReportPage() {
             probabilities. Raw counts include disputed findings; see their
             feedback labels below.
           </p>
+          {report.coverage && (
+            <p className="muted small">{report.coverage.message}</p>
+          )}
         </section>
       </div>
       <section className="panel">

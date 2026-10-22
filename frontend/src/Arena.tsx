@@ -401,6 +401,10 @@ export default function Arena(props: Props) {
       camera.position.lerp(position, easing);
       look.lerp(target, easing);
       camera.lookAt(look);
+      renderer.domElement.dataset.cameraMode = effective;
+      renderer.domElement.dataset.annotationCount = String(
+        annotations.children.length,
+      );
       renderer.render(scene, camera);
       raf = requestAnimationFrame(render);
     };

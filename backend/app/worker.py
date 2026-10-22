@@ -85,7 +85,11 @@ class ReplayWorker:
         target = directory / "frames.json"
         try:
             data = run_parser(directory / "source.replay", target, self.settings.parser_timeout)
-            findings, active_seconds = analyse(data, candidate)
+            diagnostics: dict = {}
+            findings, active_seconds = analyse(data, candidate, diagnostics)
+            (directory / "analysis-diagnostics.json").write_text(
+                json.dumps(diagnostics, indent=2), encoding="utf-8"
+            )
             data["metadata"]["active_seconds"] = active_seconds
             with self.sessions() as db:
                 replay = db.get(Replay, candidate)
