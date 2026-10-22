@@ -1,19 +1,15 @@
 import {
-  Activity,
   ArrowRight,
   ArrowUpRight,
   BarChart3,
   Check,
   ChevronRight,
-  CirclePlay,
-  Crosshair,
   FileVideo,
   LayoutDashboard,
   LogOut,
   Menu,
   Settings as SettingsIcon,
   ShieldCheck,
-  Sparkles,
   Upload,
   X,
 } from "lucide-react";
@@ -42,6 +38,7 @@ import {
 import { formatTime } from "./time";
 import ReplayPage from "./ReplayPage";
 import ReportPage from "./ReportPage";
+import Landing from "./Landing";
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -64,132 +61,6 @@ class ErrorBoundary extends Component<
       this.props.children
     );
   }
-}
-
-function Landing() {
-  const { user } = useAuth();
-  return (
-    <div className="landing">
-      <nav className="landing-nav">
-        <Logo />
-        <span className="badge">DEVELOPMENT PREVIEW</span>
-        <Link className="button subtle" to={user ? "/dashboard" : "/login"}>
-          {user ? "Open workspace" : "Sign in"} <ArrowUpRight size={16} />
-        </Link>
-      </nav>
-      <main className="landing-main">
-        <section className="hero">
-          <div>
-            <p className="eyebrow">
-              <span className="live-dot" /> REPLAY. REFLECT. RANK UP.
-            </p>
-            <h1>
-              See the game.
-              <br />
-              Understand
-              <br />
-              <span>your decisions.</span>
-            </h1>
-            <p className="hero-description">
-              Turn your Rocket League replays into a focused review. Revisit the
-              space, the timing, and the decisions behind every play.
-            </p>
-            <div className="actions">
-              <Link
-                className="button primary large"
-                to={user ? "/upload" : "/register"}
-              >
-                Start your review <ArrowRight size={18} />
-              </Link>
-              <a href="#how-it-works" className="text-link">
-                Explore the workflow <ChevronRight size={16} />
-              </a>
-            </div>
-            <p className="hero-note">
-              <ShieldCheck size={14} /> Real replay data. Explainable rules.
-              Your perspective.
-            </p>
-          </div>
-          <div className="hero-visual">
-            <div className="visual-top">
-              <span>
-                <span className="live-dot" /> TACTICAL PERSPECTIVE
-              </span>
-              <Crosshair size={16} />
-            </div>
-            <ArenaDiagram />
-            <div className="illustration-label">
-              ILLUSTRATION · NOT A LIVE REPLAY
-            </div>
-            <div className="visual-caption">
-              <span className="caption-icon">
-                <Sparkles size={18} />
-              </span>
-              <div>
-                <strong>A different angle on your game.</strong>
-                <p>Review the decision. Explore an alternative.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-        <section id="how-it-works" className="workflow">
-          <div className="section-heading">
-            <p className="eyebrow">FROM REPLAY TO REFLECTION</p>
-            <h2>Less guessing. More understanding.</h2>
-            <p>
-              A focused workspace for the moments that deserve another look.
-            </p>
-          </div>
-          <div className="feature-grid">
-            {[
-              {
-                n: "01",
-                icon: Upload,
-                title: "Bring your match",
-                text: "Upload an intact .replay file. Pick your player and reconstruct the match from recorded data.",
-              },
-              {
-                n: "02",
-                icon: CirclePlay,
-                title: "Review the decision",
-                text: "Pause at potential positioning issues. See the evidence and explore a proposed alternative.",
-              },
-              {
-                n: "03",
-                icon: BarChart3,
-                title: "Find your focus",
-                text: "Save your report and track flagged decisions per minute across the matches you review.",
-              },
-            ].map((item) => (
-              <article key={item.n}>
-                <span className="feature-number">{item.n} /</span>
-                <item.icon size={22} />
-                <h3>{item.title}</h3>
-                <p>{item.text}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-        <div className="honesty-note">
-          <Activity size={19} />
-          <p>
-            <strong>Built for thoughtful review.</strong> Coaching detectors are
-            experimental geometric rules, pending expert evaluation. Findings
-            are potential issues; alternatives are suggestions. No trained
-            coaching model or SSL-quality claim.
-          </p>
-        </div>
-      </main>
-      <footer className="landing-footer">
-        <Logo />
-        <p>
-          Independent, unofficial project. Not affiliated with Psyonix or Epic
-          Games.
-        </p>
-        <span>PLAY WITH INTENTION.</span>
-      </footer>
-    </div>
-  );
 }
 
 function AuthPage({ register = false }: { register?: boolean }) {
@@ -320,6 +191,16 @@ function Workspace() {
   }
   return (
     <div className="workspace">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      {open && (
+        <button
+          className="nav-backdrop"
+          aria-label="Close navigation overlay"
+          onClick={() => setOpen(false)}
+        />
+      )}
       <button
         className="mobile-menu button subtle"
         aria-label={open ? "Close navigation" : "Open navigation"}
@@ -330,14 +211,14 @@ function Workspace() {
       <aside className={`sidebar ${open ? "is-open" : ""}`}>
         <Logo />
         <div className="workspace-label">
-          PLAYER WORKSPACE <span>V0.1</span>
+          ROCKET LEAGUE <span>COACHING</span>
         </div>
         <nav aria-label="Main navigation">
           {[
-            { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
+            { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
             { to: "/upload", label: "Upload replay", icon: Upload },
             { to: "/history", label: "Replay library", icon: FileVideo },
-            { to: "/analytics", label: "Patterns & progress", icon: BarChart3 },
+            { to: "/analytics", label: "Improvement history", icon: BarChart3 },
             { to: "/settings", label: "Settings", icon: SettingsIcon },
           ].map((item) => (
             <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)}>
@@ -379,7 +260,7 @@ function Workspace() {
           </span>
         </div>
         <ErrorMessage error={error} />
-        <main className="page">
+        <main className="page" id="main-content" tabIndex={-1}>
           <Outlet />
         </main>
         <footer className="workspace-footer">

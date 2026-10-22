@@ -17,7 +17,7 @@ async function register(page: Page) {
 
 test('landing is original, labelled and responsive', async ({page}) => {
   await page.goto('/');
-  await expect(page.getByRole('heading',{level:1})).toHaveText('See the game.Understandyour decisions.');
+  await expect(page.getByRole('heading',{level:1})).toHaveText('A better view.A clearer next move.');
   await expect(page.getByText('ILLUSTRATION · NOT A LIVE REPLAY')).toBeVisible();
   await page.screenshot({path:resolve(artifact,'landing-desktop.png'),fullPage:true});
   await page.setViewportSize({width:390,height:844});
