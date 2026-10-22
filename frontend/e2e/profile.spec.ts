@@ -1,0 +1,37 @@
+import { expect, test } from '@playwright/test';
+
+test('onboarding saves independent self-reported ranks and update history', async ({page}) => {
+  await page.goto('/register');
+  await page.getByLabel('Display name', {exact:true}).fill('Rank QA');
+  await page.getByLabel('Email address').fill(`rank-${Date.now()}@example.com`);
+  await page.getByLabel('Password', {exact:true}).fill('disposable-local-qa-password');
+  await page.getByRole('button', {name:'Create account',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Make this your coaching space.'})).toBeVisible();
+  await page.getByLabel('Rocket League display username').fill('Busiest');
+  await page.getByLabel('Gaming platform (optional)').selectOption('PC');
+  const duel = page.getByRole('form',{name:'1v1 rank'});
+  await duel.getByRole('button',{name:'Gold',exact:true}).click();
+  await duel.getByRole('button',{name:'II',exact:true}).click();
+  await duel.getByLabel('Division (optional)').selectOption('3');
+  await duel.getByLabel('MMR (optional)').fill('700');
+  await duel.getByRole('button',{name:'Save 1v1 rank',exact:true}).click();
+  await expect(duel.getByRole('button',{name:'Saved 1v1 rank'})).toBeVisible();
+  const doubles = page.getByRole('form',{name:'2v2 rank'});
+  await doubles.getByRole('button',{name:'Grand Champion',exact:true}).click();
+  await doubles.getByRole('button',{name:'Save 2v2 rank',exact:true}).click();
+  await expect(doubles.getByRole('button',{name:'Saved 2v2 rank'})).toBeVisible();
+  await page.getByRole('button',{name:'Finish setup'}).click();
+  await page.goto('/profile/rocket-league');
+  await expect(page.getByLabel('Rocket League display username')).toHaveValue('Busiest');
+  await expect(duel.getByRole('heading')).toHaveText('Gold II');
+  await expect(doubles.getByRole('heading')).toHaveText('Grand Champion I');
+  await expect(duel.getByLabel('MMR (optional)')).toHaveValue('700');
+  await duel.getByRole('button',{name:'Supersonic Legend',exact:true}).click();
+  await expect(duel.getByLabel('Division (optional)')).toHaveCount(0);
+  await duel.getByRole('button',{name:'Save 1v1 rank',exact:true}).click();
+  await expect(page.locator('tbody tr')).toHaveCount(3);
+  await page.screenshot({path:'../.research/screenshots/ranks-desktop.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+  await page.screenshot({path:'../.research/screenshots/ranks-mobile.png',fullPage:true});
+});

@@ -8,6 +8,7 @@ test('genuine rule finding drives automatic coaching, annotations and Continue',
   await page.getByLabel('Email address').fill(`detection-${Date.now()}@example.com`);
   await page.getByLabel('Password', {exact:true}).fill('disposable-local-qa-password');
   await page.getByRole('button',{name:'Create account',exact:true}).click();
+  await page.getByRole('link', {name:'Skip for now'}).click();
   await expect(page.getByRole('heading',{name:'Your game. A fresh perspective.'})).toBeVisible();
   await page.goto('/upload');
   await page.getByLabel('Choose replay file').setInputFiles(file!);

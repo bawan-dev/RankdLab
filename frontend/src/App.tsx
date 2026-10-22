@@ -39,6 +39,7 @@ import { formatTime } from "./time";
 import ReplayPage from "./ReplayPage";
 import ReportPage from "./ReportPage";
 import Landing from "./Landing";
+import ProfilePage from "./Profile";
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -68,7 +69,7 @@ function AuthPage({ register = false }: { register?: boolean }) {
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const navigate = useNavigate();
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) return <Navigate to={register ? "/onboarding" : "/dashboard"} replace />;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -80,7 +81,7 @@ function AuthPage({ register = false }: { register?: boolean }) {
         { method: "POST", body: JSON.stringify(Object.fromEntries(fields)) },
       );
       setUser(result);
-      navigate("/dashboard");
+      navigate(register ? "/onboarding" : "/dashboard");
     } catch (error) {
       setError(message(error));
     } finally {
@@ -725,6 +726,7 @@ function AnalyticsPage() {
 function SettingsPage() {
   const { user, setUser } = useAuth(),
     navigate = useNavigate();
+  const [displayName, setDisplayName] = useState(user?.display_name ?? "");
   const [goal, setGoal] = useState(user?.coaching_goal ?? ""),
     [error, setError] = useState(""),
     [saved, setSaved] = useState(false),
@@ -738,7 +740,10 @@ function SettingsPage() {
       setUser(
         await api<User>("/profile", {
           method: "PUT",
-          body: JSON.stringify({ coaching_goal: goal }),
+          body: JSON.stringify({
+            coaching_goal: goal,
+            display_name: displayName,
+          }),
         }),
       );
       setSaved(true);
@@ -768,6 +773,15 @@ function SettingsPage() {
         description="Your account, your focus, your data."
       />
       <ErrorMessage error={error} />
+      <Link to="/profile/rocket-league" className="profile-entry panel">
+        <div>
+          <h2>Rocket League ranks & profile</h2>
+          <p>
+            Manage your three playlist ranks and review your update history.
+          </p>
+        </div>
+        <ArrowUpRight size={22} />
+      </Link>
       <div className="settings-grid">
         <section className="panel settings-panel">
           <p className="eyebrow">ACCOUNT</p>
@@ -779,7 +793,19 @@ function SettingsPage() {
         </section>
         <form className="panel settings-panel" onSubmit={save}>
           <p className="eyebrow">YOUR NEXT SESSION</p>
-          <h2>One clear intention.</h2>
+          <h2>Your profile and focus.</h2>
+          <label>
+            Display username
+            <input
+              value={displayName}
+              required
+              maxLength={60}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                setSaved(false);
+              }}
+            />
+          </label>
           <p>Give your next review a focus you can act on.</p>
           <label>
             Coaching goal
@@ -853,6 +879,8 @@ export default function App() {
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/onboarding" element={<ProfilePage onboarding />} />
+            <Route path="/profile/rocket-league" element={<ProfilePage />} />
             <Route path="/replays/:id" element={<ReplayPage />} />
             <Route path="/replays/:id/report" element={<ReportPage />} />
           </Route>

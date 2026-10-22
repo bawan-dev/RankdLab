@@ -17,10 +17,23 @@ from starlette.responses import FileResponse, JSONResponse
 
 from app.analysis import RELIABILITY, priorities, retreat_target
 from app.config import ROOT, Settings
-from app.database import Base, Feedback, LoginSession, Replay, ReviewLabel, User, connect, now, uid
+from app.database import (
+    Base,
+    Feedback,
+    LoginSession,
+    RankRecord,
+    Replay,
+    ReviewLabel,
+    RocketProfile,
+    User,
+    connect,
+    now,
+    uid,
+)
 from app.features import VERSION as FEATURE_VERSION
 from app.features import extract_features
 from app.middleware import RequestGuard
+from app.profiles import Playlist, RankInput, RocketProfileInput, rank_dict
 from app.security import COOKIE, DUMMY_HASH, RateLimiter, new_token, passwords, token_hash
 from app.worker import ReplayWorker
 
@@ -35,7 +48,8 @@ class Registration(Credentials):
 
 
 class ProfileUpdate(BaseModel):
-    coaching_goal: str = Field(max_length=500)
+    coaching_goal: str | None = Field(default=None, max_length=500)
+    display_name: str | None = Field(default=None, min_length=1, max_length=60, pattern=r".*\S.*")
 
 
 class SessionUpdate(BaseModel):
@@ -86,6 +100,8 @@ def replay_dict(replay: Replay):
         "session_time": replay.session_time,
         "reviewed_ids": replay.reviewed_ids,
         "engine_version": replay.engine_version,
+        "coaching_context": replay.coaching_context,
+        "requested_playlist": replay.requested_playlist,
     }
 
 
@@ -248,9 +264,50 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.put("/api/profile")
     def profile(payload: ProfileUpdate, user: Owner, db: Db):
-        user.coaching_goal = payload.coaching_goal.strip()
+        if payload.coaching_goal is not None:
+            user.coaching_goal = payload.coaching_goal.strip()
+        if payload.display_name is not None:
+            user.display_name = payload.display_name.strip()
         db.commit()
         return user_dict(user)
+
+    @application.get("/api/rocket-league/profile")
+    def rocket_profile(user: Owner, db: Db):
+        profile = db.get(RocketProfile, user.id)
+        records = list(
+            db.scalars(
+                select(RankRecord)
+                .where(RankRecord.user_id == user.id)
+                .order_by(RankRecord.created_at.desc(), RankRecord.id.desc())
+            )
+        )
+        ranks: dict = {}
+        for record in records:
+            ranks.setdefault(record.playlist, rank_dict(record))
+        return {
+            "display_name": profile.display_name if profile else "",
+            "platform": profile.platform if profile else "",
+            "onboarding_complete": profile.onboarding_complete if profile else False,
+            "ranks": ranks,
+            "history": [rank_dict(r) for r in records],
+        }
+
+    @application.put("/api/rocket-league/profile")
+    def update_rocket_profile(payload: RocketProfileInput, user: Owner, db: Db):
+        profile = db.get(RocketProfile, user.id) or RocketProfile(user_id=user.id)
+        profile.display_name = payload.display_name.strip()
+        profile.platform = payload.platform
+        profile.onboarding_complete = payload.onboarding_complete
+        db.add(profile)
+        db.commit()
+        return rocket_profile(user, db)
+
+    @application.put("/api/rocket-league/ranks/{playlist}")
+    def update_rank(playlist: Playlist, payload: RankInput, user: Owner, db: Db):
+        record = RankRecord(user_id=user.id, playlist=playlist, **payload.model_dump())
+        db.add(record)
+        db.commit()
+        return rank_dict(record)
 
     @application.get("/api/replays")
     def replays(user: Owner, db: Db):

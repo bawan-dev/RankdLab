@@ -34,6 +34,27 @@ class LoginSession(Base):
     expires_at: Mapped[float] = mapped_column(Float, index=True)
 
 
+class RocketProfile(Base):
+    __tablename__ = "rocket_profiles"
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    display_name: Mapped[str] = mapped_column(String(60), default="")
+    platform: Mapped[str] = mapped_column(String(30), default="")
+    onboarding_complete: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class RankRecord(Base):
+    __tablename__ = "rank_history"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=uid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    playlist: Mapped[str] = mapped_column(String(3))
+    rank: Mapped[str] = mapped_column(String(40))
+    division: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mmr: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[float] = mapped_column(Float, default=now)
+
+
 class Replay(Base):
     __tablename__ = "replays"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=uid)
@@ -49,6 +70,8 @@ class Replay(Base):
     session_time: Mapped[float] = mapped_column(Float, default=0)
     reviewed_ids: Mapped[list] = mapped_column(JSON, default=list)
     engine_version: Mapped[str] = mapped_column(String(40), default="geometry-0.1.0")
+    coaching_context: Mapped[dict] = mapped_column(JSON, default=dict)
+    requested_playlist: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
 
 class Feedback(Base):
