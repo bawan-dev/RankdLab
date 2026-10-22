@@ -38,3 +38,15 @@ Milestone 2 is functional for the tested Soccar fixture. Milestone 3 has working
 authored coaching. Milestone 4 delivers three experimental rules, not validated
 coaching accuracy. Milestone 5 delivers local persistent accounts and reports;
 production PostgreSQL verification, account recovery and broader scale remain.
+
+## ML infrastructure checkpoint — 2026-10-22
+
+- Backend now **23 pytest tests passed**; Ruff and mypy passed.
+- Feature extraction, owner-scoped explicit review labels, versioned JSONL export,
+  label deletion and grouped holdout logic are implemented and tested.
+- Offline logistic baseline and majority/rule comparisons executed in a clearly
+  synthetic unit-test smoke test. No genuine coaching dataset, product model or
+  coaching performance metric was fabricated.
+- Optional MLflow integration is written but unexecuted; it is documented as such.
+- Milestone 6 infrastructure is available; expert data collection and validated
+  model integration remain future work.

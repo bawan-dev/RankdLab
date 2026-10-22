@@ -214,6 +214,9 @@ def analyse(data: dict, replay_id: str) -> tuple[list[dict], float]:
             continue
         if previous is not None and 0 <= time - previous < 0.25:
             active_seconds += time - previous
+        elif previous is not None:
+            starts.clear()
+            active_since = time
         previous = time
         if active_since is None:
             active_since = time

@@ -116,6 +116,33 @@ def test_real_replay_pipeline(authenticated, application, genuine_replay):
     assert stats["matches"] == 1
     assert stats["findings"] == sum(f["source"] == "rule" for f in report["findings"])
     assert stats["minutes"] == report["active_seconds"] / 60
+    label = authenticated.post(
+        f"/api/replays/{replay_id}/labels",
+        json={
+            "player_id": player["id"],
+            "time": 25,
+            "category": "potential_double_commit",
+            "label": 0,
+        },
+    )
+    assert label.status_code == 201, label.text
+    assert label.json()["label_source"] == "account_owner_not_expert_verified"
+    exported = authenticated.get("/api/labels/export")
+    rows = [json.loads(line) for line in exported.text.splitlines()]
+    assert len(rows) == 1
+    assert rows[0]["label"] == 0 and rows[0]["features"]["ball_distance_uu"] >= 0
+    assert (
+        authenticated.post(
+            f"/api/replays/{replay_id}/labels",
+            json={
+                "player_id": "invalid",
+                "time": 25,
+                "category": "potential_double_commit",
+                "label": 1,
+            },
+        ).status_code
+        == 422
+    )
     assert authenticated.delete(f"/api/replays/{replay_id}").status_code == 204
     with application.state.sessions() as db:
         assert db.get(Replay, replay_id) is None

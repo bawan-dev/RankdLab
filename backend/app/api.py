@@ -3,7 +3,7 @@ import logging
 import shutil
 from collections import Counter
 from contextlib import asynccontextmanager
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,7 +17,9 @@ from starlette.responses import FileResponse, JSONResponse
 
 from app.analysis import RELIABILITY, priorities, retreat_target
 from app.config import ROOT, Settings
-from app.database import Base, Feedback, LoginSession, Replay, User, connect, now, uid
+from app.database import Base, Feedback, LoginSession, Replay, ReviewLabel, User, connect, now, uid
+from app.features import VERSION as FEATURE_VERSION
+from app.features import extract_features
 from app.middleware import RequestGuard
 from app.security import COOKIE, DUMMY_HASH, RateLimiter, new_token, passwords, token_hash
 from app.worker import ReplayWorker
@@ -53,6 +55,13 @@ class ManualMoment(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     explanation: str = Field(min_length=1, max_length=1500)
     alternative: str = Field(min_length=1, max_length=1000)
+
+
+class LabelInput(BaseModel):
+    player_id: str
+    time: float = Field(ge=0, allow_inf_nan=False)
+    category: Literal["potential_double_commit", "defensive_bunching", "potential_exposed_goal"]
+    label: Literal[0, 1]
 
 
 def user_dict(user: User):
@@ -457,6 +466,90 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "previous_rate": rate(matches[5:10]),
             "engine_versions": sorted({r.engine_version for r in matches}),
         }
+
+    @application.post("/api/replays/{replay_id}/labels", status_code=201)
+    def label_example(replay_id: str, payload: LabelInput, user: Owner, db: Db):
+        replay = owned(replay_id, user, db)
+        if replay.status != "ready":
+            raise HTTPException(409, "Replay is not ready")
+        if payload.time > replay.metadata_json["duration"]:
+            raise HTTPException(422, "Timestamp is outside the replay")
+        data = json.loads(
+            (config.data_dir / "replays" / replay.id / "frames.json").read_text(encoding="utf-8")
+        )
+        frame = min(data["frames"], key=lambda f: abs(f["time"] - payload.time))
+        try:
+            features = extract_features(frame, replay.metadata_json["players"], payload.player_id)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from None
+        existing = db.scalar(
+            select(ReviewLabel).where(
+                ReviewLabel.replay_id == replay.id,
+                ReviewLabel.player_id == payload.player_id,
+                ReviewLabel.category == payload.category,
+                ReviewLabel.timestamp == frame["time"],
+                ReviewLabel.reviewer == user.id,
+            )
+        )
+        label = existing or ReviewLabel(
+            replay_id=replay.id,
+            player_id=payload.player_id,
+            timestamp=frame["time"],
+            category=payload.category,
+            reviewer=user.id,
+            features=features,
+            feature_version=FEATURE_VERSION,
+        )
+        label.label = payload.label
+        db.add(label)
+        db.commit()
+        return {
+            "id": label.id,
+            "time": label.timestamp,
+            "category": label.category,
+            "label": label.label,
+            "feature_version": label.feature_version,
+            "label_source": "account_owner_not_expert_verified",
+        }
+
+    @application.get("/api/labels/export")
+    def export_labels(user: Owner, db: Db):
+        records = []
+        labels = db.scalars(select(ReviewLabel).join(Replay).where(Replay.user_id == user.id))
+        for label in labels:
+            replay = db.get(Replay, label.replay_id)
+            if replay is None:
+                continue
+            # Match the stored detector decision in the immediate review window.
+            prediction = int(
+                any(
+                    f["source"] == "rule"
+                    and f["player_id"] == label.player_id
+                    and f["category"] == label.category
+                    and abs(f["time"] - label.timestamp) <= 1
+                    for f in replay.findings
+                )
+            )
+            records.append(
+                {
+                    "id": label.id,
+                    "replay_id": label.replay_id,
+                    "player_id": label.player_id,
+                    "time": label.timestamp,
+                    "category": label.category,
+                    "label": label.label,
+                    "label_source": "account_owner_not_expert_verified",
+                    "feature_version": label.feature_version,
+                    "features": label.features,
+                    "rule_prediction": prediction,
+                    "engine_version": replay.engine_version,
+                }
+            )
+        return Response(
+            "\n".join(json.dumps(r) for r in records),
+            media_type="application/x-ndjson",
+            headers={"Content-Disposition": 'attachment; filename="rankdlab-labels.jsonl"'},
+        )
 
     def remove_files(replay_id: str):
         directory = config.data_dir / "replays" / replay_id
