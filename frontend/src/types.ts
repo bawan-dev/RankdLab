@@ -43,7 +43,15 @@ export type Metadata = {
   goals: Goal[];
 };
 export type Finding = {
-  coaching?: {guidance:string;presentation_level:string;rank?:Rank|null;prior_category_findings:number;playlist:string;context_version:string;note:string};
+  coaching?: {
+    guidance: string;
+    presentation_level: string;
+    rank?: Rank | null;
+    prior_category_findings: number;
+    playlist: string;
+    context_version: string;
+    note: string;
+  };
   id: string;
   replay_id: string;
   player_id: string;

@@ -378,9 +378,9 @@ function CoachingViewer({
     setSaved(false);
   }
   function review(finding: Finding) {
-    setPlaying(false);
-    seek(finding.time);
-    setCoach({ ...coach, phase: "framing", activeId: finding.id });
+    seek(finding.time - 3);
+    setCoach({ ...coach, phase: "context", activeId: finding.id });
+    setPlaying(true);
   }
   function proceed() {
     const next = continueCoaching(coach);
@@ -622,6 +622,13 @@ function CoachingViewer({
               </div>
             </div>
             <div className="viewer-toolbar">
+              <span className="camera-state" aria-live="polite">
+                {camera === "director"
+                  ? active
+                    ? "Director / challenge view"
+                    : "Director / following play"
+                  : `Manual / ${camera}`}
+              </span>
               <label>
                 Camera{" "}
                 <select
@@ -722,7 +729,20 @@ function CoachingViewer({
                 </div>
                 <h2>{active.title}</h2>
                 <p className="coaching-explanation">{active.explanation}</p>
-                {active.coaching && <div className="coaching-guidance"><span className="eyebrow">YOUR REVIEW FOCUS / {active.coaching.presentation_level}</span><p>{active.coaching.guidance}</p><small>{active.coaching.rank?.rank ?? "Rank not set"} / Self-reported at analysis / {active.coaching.prior_category_findings} prior observations for this player and playlist</small></div>}
+                {active.coaching && (
+                  <div className="coaching-guidance">
+                    <span className="eyebrow">
+                      YOUR REVIEW FOCUS / {active.coaching.presentation_level}
+                    </span>
+                    <p>{active.coaching.guidance}</p>
+                    <small>
+                      {active.coaching.rank?.rank ?? "Rank not set"} /
+                      Self-reported at analysis /{" "}
+                      {active.coaching.prior_category_findings} prior
+                      observations for this player and playlist
+                    </small>
+                  </div>
+                )}
                 <div className="alternative-box">
                   <span className="eyebrow">PROPOSED ALTERNATIVE</span>
                   <p>{active.alternative}</p>

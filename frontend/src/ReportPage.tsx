@@ -86,7 +86,23 @@ export default function ReportPage() {
         }
       />
       <ErrorMessage error={error} />
-      <section className="report-context panel"><div><span className="eyebrow">CONTEXT AT ANALYSIS</span><h3>{report.coaching_context?.playlist ?? report.metadata.classification?.format ?? "Legacy report"} / {report.coaching_context?.rank?.rank ?? "Rank not recorded"}</h3><p>{report.coaching_context?.rank ? "Self-reported rank snapshot. Later rank edits do not change this report." : "No rank was captured for this analysis. Existing results are preserved."}</p></div><span className="badge">{report.engine_version}</span></section>
+      <section className="report-context panel">
+        <div>
+          <span className="eyebrow">CONTEXT AT ANALYSIS</span>
+          <h3>
+            {report.coaching_context?.playlist ??
+              report.metadata.classification?.format ??
+              "Legacy report"}{" "}
+            / {report.coaching_context?.rank?.rank ?? "Rank not recorded"}
+          </h3>
+          <p>
+            {report.coaching_context?.rank
+              ? "Self-reported rank snapshot. Later rank edits do not change this report."
+              : "No rank was captured for this analysis. Existing results are preserved."}
+          </p>
+        </div>
+        <span className="badge">{report.engine_version}</span>
+      </section>
       <section className="report-match panel">
         <div>
           <p className="eyebrow">SELECTED PLAYER</p>
@@ -184,7 +200,11 @@ export default function ReportPage() {
                   )}
                 </div>
                 <p>{finding.explanation}</p>
-              {finding.coaching && <p className="coaching-guidance">{finding.coaching.guidance}</p>}
+                {finding.coaching && (
+                  <p className="coaching-guidance">
+                    {finding.coaching.guidance}
+                  </p>
+                )}
                 <p className="proposed">
                   <strong>Proposed alternative:</strong> {finding.alternative}
                 </p>

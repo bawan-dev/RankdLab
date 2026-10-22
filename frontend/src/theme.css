@@ -1,4 +1,322 @@
 /* Shared tokens with a Rocket League theme. Breakpoints: compact 640px, tablet 1000px. */
+.viewer-header {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+.viewer-header h1 {
+  font-size: 24px;
+  max-width: 740px;
+  overflow-wrap: anywhere;
+}
+.viewer-header p {
+  font-size: 12px;
+}
+.coaching-layout {
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+}
+.viewer-stage {
+  height: clamp(410px, 40vw, 640px);
+  border-radius: 14px 14px 0 0;
+  border-color: var(--line);
+}
+.stage-label {
+  font-size: 9px;
+  padding: 9px 11px;
+}
+.stage-bottom {
+  font-size: 11px;
+}
+.stage-bottom > span {
+  font-size: 10px;
+}
+.scoreboard {
+  background: #0a182ce8;
+  border-color: #3d5470;
+  padding: 10px 20px;
+}
+.scoreboard strong {
+  font-size: 19px;
+}
+.scoreboard > span {
+  font-size: 25px;
+}
+.playback-controls {
+  background: var(--surface-2);
+  border-color: var(--line);
+  padding: 20px;
+}
+.play-button {
+  background: var(--blue);
+  color: #071624;
+  width: 40px;
+  height: 40px;
+}
+.timeline input {
+  accent-color: var(--blue);
+}
+.timeline-marker {
+  min-width: 12px;
+  min-height: 18px;
+  border-radius: 4px;
+}
+.viewer-toolbar {
+  background: #102035;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-top: 0;
+  flex-wrap: wrap;
+  gap: 14px;
+  border-radius: 0 0 12px 12px;
+}
+.camera-state {
+  font-size: 10px;
+  color: #8cddff;
+  width: 100%;
+  letter-spacing: 0.04em;
+}
+.viewer-toolbar label {
+  font-size: 11px;
+}
+.viewer-toolbar select {
+  font-size: 12px;
+}
+.team-panel {
+  margin-top: 20px;
+  background: var(--surface-1);
+}
+.team-panel-heading h2 {
+  font-size: 16px;
+}
+.player-stat {
+  background: #12243a;
+  border-color: var(--line);
+}
+.player-stat > span {
+  font-size: 11px;
+}
+.player-stat.selected {
+  border-color: var(--blue);
+}
+.coach-panel {
+  background: var(--surface-1);
+  border-radius: 14px;
+}
+.coach-panel-header {
+  padding: 20px;
+  background: #172a40;
+  border-color: var(--line);
+}
+.coach-panel-header > .eyebrow {
+  font-size: 10px;
+}
+.coach-panel-header > .badge {
+  font-size: 8px;
+}
+.coaching-content {
+  padding: 22px;
+}
+.coaching-content h2 {
+  font-size: 24px;
+  line-height: 1.25;
+  margin: 18px 0;
+}
+.coaching-explanation {
+  font-size: 13px;
+  line-height: 1.75;
+}
+.coaching-guidance {
+  margin: 18px 0;
+  padding: 16px;
+  border-left: 2px solid var(--blue);
+  background: #142d41;
+}
+.coaching-guidance p {
+  font-size: 13px;
+  margin: 9px 0;
+}
+.coaching-guidance small {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+  display: block;
+}
+.alternative-box {
+  background: #29291f;
+  border-color: #51412e;
+  padding: 16px;
+}
+.alternative-box p {
+  font-size: 12px;
+  line-height: 1.75;
+}
+.alternative-box small {
+  font-size: 10px;
+}
+.evidence-list {
+  font-size: 11px;
+}
+.coaching-content details summary {
+  font-size: 12px;
+}
+.review-actions {
+  position: sticky;
+  bottom: 0;
+  padding: 14px 0;
+  background: var(--surface-1);
+  gap: 10px;
+}
+.review-actions .button {
+  font-size: 12px;
+  min-height: 44px;
+}
+.coach-idle {
+  padding: 32px 24px;
+}
+.coach-idle p {
+  font-size: 13px;
+}
+.coach-orb {
+  background: #16354a;
+  color: var(--blue);
+  border-color: #2c4b64;
+}
+.coach-idle > .badge {
+  font-size: 9px;
+}
+.moment-list {
+  border-color: var(--line);
+}
+.moment-item {
+  padding: 16px;
+}
+.pause-indicator {
+  background: #0b1a2ee8;
+  color: #e8f1fa;
+  border-color: #3c6780;
+  font-size: 11px;
+}
+.report-context {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 24px;
+  margin-bottom: 24px;
+}
+.report-context h3 {
+  font-size: 18px;
+  margin: 10px 0;
+}
+.report-context p {
+  font-size: 12px;
+}
+.report-findings p {
+  font-size: 13px;
+}
+.report-findings h3 {
+  font-size: 18px;
+}
+@media (max-width: 1250px) {
+  .coaching-layout {
+    grid-template-columns: 1fr;
+  }
+  .coach-panel {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+  }
+  .coach-panel-header {
+    grid-column: 1/-1;
+  }
+  .moment-list {
+    border-left: 1px solid var(--line);
+  }
+  .viewer-stage {
+    height: 520px;
+  }
+}
+@media (max-width: 640px) {
+  .viewer-header {
+    gap: 16px;
+  }
+  .viewer-header h1 {
+    font-size: 20px;
+  }
+  .viewer-stage {
+    height: 360px;
+  }
+  .stage-label {
+    font-size: 7px;
+    padding: 7px;
+  }
+  .stage-top {
+    inset: 12px 10px auto;
+    gap: 6px;
+  }
+  .scoreboard {
+    padding: 7px 11px;
+  }
+  .scoreboard strong {
+    font-size: 14px;
+  }
+  .scoreboard > span {
+    font-size: 18px;
+  }
+  .stage-bottom {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .stage-bottom > span {
+    font-size: 8px;
+  }
+  .playback-controls {
+    padding: 16px;
+  }
+  .coach-panel {
+    display: block;
+  }
+  .moment-list {
+    border-left: 0;
+  }
+  .viewer-toolbar {
+    gap: 12px;
+  }
+  .viewer-toolbar > .checkbox-label {
+    font-size: 11px;
+  }
+  .viewer-toolbar select {
+    width: 175px;
+  }
+  .coaching-content {
+    padding: 20px;
+  }
+  .player-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-context {
+    display: block;
+    padding: 20px;
+  }
+  .report-context > .badge {
+    margin-top: 14px;
+  }
+  .report-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-stats > div {
+    padding: 16px;
+  }
+  .report-stats strong {
+    position: static;
+  }
+  .report-stats span {
+    font-size: 11px;
+  }
+}
 .dashboard-modes {
   margin-bottom: 18px;
 }

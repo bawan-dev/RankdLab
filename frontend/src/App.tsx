@@ -319,7 +319,11 @@ function UploadPage() {
       <PageHeader
         eyebrow="BRING YOUR GAME"
         title="Every replay has a story."
-        description="Start with the match. We’ll help you take a closer look."
+        description={
+          playlist
+            ? `Upload for ${playlist}. We will check the replay team format before coaching.`
+            : "Start with the match. We’ll help you take a closer look."
+        }
       />
       <div className="upload-layout">
         <form className="panel upload-panel" onSubmit={upload}>

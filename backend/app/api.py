@@ -549,7 +549,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "Experimental duel exposure geometry only. Challenges, possession, boost decisions "
                 "and mechanics are not assessed. Zero flags does not mean mistake-free play."
                 if mode == "1v1"
-                else "Three experimental team geometry rules. Rotation intent, challenge sequencing, "
+                else "Three experimental team rules. Rotation intent, challenge sequencing, "
                 "boost and mechanics are not assessed. Zero flags does not mean mistake-free play."
             )
         elif not team_supported:

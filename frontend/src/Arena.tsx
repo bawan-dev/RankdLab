@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { Finding, ReplayData } from "./types";
-import { frameIndex, interpolate, toWorld } from "./playback";
+import { frameIndex, interpolate, toWorld, recordedSegments } from "./playback";
 
 export type CameraMode =
   "director" | "overhead" | "perspective" | "ball" | "player" | "aerial";
@@ -234,18 +234,23 @@ export default function Arena(props: Props) {
       dispose(annotations);
       annotations.clear();
       if (!finding) return;
-      const nearby = data.frames.filter(
-        (f) => f.time >= finding.time - 2 && f.time <= finding.time + 3,
+      const paths = recordedSegments(
+        data.frames,
+        finding.time - 2,
+        finding.time + 3,
+        finding.player_id,
+      ).map((segment) =>
+        segment.map((p) => toWorld(p).add(new THREE.Vector3(0, 0.5, 0))),
       );
-      const path = nearby
-        .map((f) => f.players[finding.player_id])
-        .filter((v) => v !== null)
-        .map((a) => toWorld(a.position).add(new THREE.Vector3(0, 0.5, 0)));
-      if (path.length > 1) line(path, "#ff6b7d", annotations);
-      const ballPath = nearby
-        .filter((f) => f.ball)
-        .map((f) => toWorld(f.ball!.position));
-      if (ballPath.length > 1) line(ballPath, "#ffd88c", annotations);
+      for (const path of paths) line(path, "#ff6b7d", annotations);
+      const path = paths.at(-1) ?? [];
+      for (const segment of recordedSegments(
+        data.frames,
+        finding.time - 2,
+        finding.time + 3,
+      )) {
+        line(segment.map(toWorld), "#ffd88c", annotations);
+      }
       const at =
         data.frames[frameIndex(data.frames, finding.time)].players[
           finding.player_id
