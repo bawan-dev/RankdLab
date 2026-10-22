@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+import logging
 
-app = FastAPI(title="RankdLab", version="0.1.0")
+from app.api import create_app
+from app.middleware import JsonFormatter
 
-
-@app.get("/api/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "version": "0.1.0"}
+handler = logging.StreamHandler()
+handler.setFormatter(JsonFormatter())
+logging.getLogger("rankdlab").addHandler(handler)
+logging.getLogger("rankdlab").setLevel(logging.INFO)
+app = create_app()
