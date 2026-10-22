@@ -22,3 +22,18 @@ dist/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local research, generated state and verification artifacts
+.research/
+data/
+*.db
+*.db-*
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+coverage/
+htmlcov/
+*.egg-info/
+playwright-report/
+test-results/
+*.tsbuildinfo
