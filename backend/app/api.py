@@ -33,6 +33,7 @@ from app.database import (
 from app.features import VERSION as FEATURE_VERSION
 from app.features import extract_features
 from app.middleware import RequestGuard
+from app.playlists import classify, needs_confirmation, replay_format
 from app.profiles import Playlist, RankInput, RocketProfileInput, rank_dict
 from app.security import COOKIE, DUMMY_HASH, RateLimiter, new_token, passwords, token_hash
 from app.worker import ReplayWorker
@@ -94,7 +95,12 @@ def replay_dict(replay: Replay):
         "status": replay.status,
         "error": replay.error,
         "created_at": replay.created_at,
-        "metadata": replay.metadata_json,
+        "metadata": {
+            **replay.metadata_json,
+            "classification": replay.metadata_json.get(
+                "classification", classify(replay.metadata_json)
+            ),
+        },
         "findings": replay.findings,
         "selected_player": replay.selected_player,
         "session_time": replay.session_time,
@@ -102,6 +108,7 @@ def replay_dict(replay: Replay):
         "engine_version": replay.engine_version,
         "coaching_context": replay.coaching_context,
         "requested_playlist": replay.requested_playlist,
+        "mode_confirmation_required": replay.status == "ready" and needs_confirmation(replay),
     }
 
 
@@ -319,7 +326,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ]
 
     @application.post("/api/replays", status_code=202)
-    async def upload(user: Owner, db: Db, file: UploadFile = File(...)):
+    async def upload(
+        user: Owner, db: Db, file: UploadFile = File(...), playlist: Playlist | None = None
+    ):
         limiter.check(f"upload:{user.id}", 10, 3600)
         filename = file.filename or ""
         if (
@@ -361,7 +370,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     target.write(chunk)
             if size < 64:
                 raise HTTPException(422, "Replay is empty or too short to be valid")
-            replay = Replay(id=replay_id, user_id=user.id, filename=filename)
+            replay = Replay(
+                id=replay_id, user_id=user.id, filename=filename, requested_playlist=playlist
+            )
             db.add(replay)
             db.commit()
             return replay_dict(replay)
@@ -390,9 +401,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             config.data_dir / "replays" / replay.id / "frames.json", media_type="application/json"
         )
 
+    @application.put("/api/replays/{replay_id}/mode")
+    def confirm_mode(replay_id: str, playlist: Playlist, user: Owner, db: Db):
+        replay = owned(replay_id, user, db)
+        if replay.status != "ready":
+            raise HTTPException(409, "Wait for replay processing")
+        detected = replay_format(replay)
+        if detected and detected != playlist:
+            raise HTTPException(422, f"Replay roster supports {detected}, not {playlist}")
+        if not detected:
+            metadata = {
+                **replay.metadata_json,
+                "classification": {
+                    **classify(replay.metadata_json),
+                    "format": playlist,
+                    "source": "user-confirmed",
+                    "ranked": None,
+                    "message": "Coaching format confirmed by account owner; ranked status unknown.",
+                },
+            }
+            replay.metadata_json = metadata
+        replay.requested_playlist = playlist
+        db.commit()
+        return replay_dict(replay)
+
     @application.put("/api/replays/{replay_id}/session")
     def save_session(replay_id: str, payload: SessionUpdate, user: Owner, db: Db):
         replay = owned(replay_id, user, db)
+        if needs_confirmation(replay):
+            raise HTTPException(409, "Confirm the replay coaching format first")
         if payload.player_id not in [p["id"] for p in replay.metadata_json.get("players", [])]:
             raise HTTPException(422, "Choose a player from this replay")
         if payload.time > replay.metadata_json.get("duration", 0):
@@ -509,7 +546,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     @application.get("/api/analytics")
-    def analytics(user: Owner, db: Db):
+    def analytics(user: Owner, db: Db, playlist: Playlist | None = None):
         matches = list(
             db.scalars(
                 select(Replay)
@@ -521,6 +558,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 .order_by(Replay.created_at.desc())
             )
         )
+        if playlist:
+            matches = [r for r in matches if replay_format(r) == playlist]
         counts: Counter = Counter()
         seconds = 0.0
         for replay in matches:
@@ -543,6 +582,44 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return count / duration * 300 if duration else None
 
         return {
+            "sessions": [
+                {
+                    "id": r.id,
+                    "date": r.created_at,
+                    "playlist": replay_format(r),
+                    "filename": r.filename,
+                    "rate": rate([r]),
+                    "active_seconds": r.metadata_json.get("active_seconds", 0),
+                    "reviewed": len(
+                        {f["id"] for f in r.findings if f["player_id"] == r.selected_player}
+                        & set(r.reviewed_ids)
+                    ),
+                    "findings": sum(
+                        f["source"] == "rule" and f["player_id"] == r.selected_player
+                        for f in r.findings
+                    ),
+                    "engine_version": r.engine_version,
+                    "coaching_context": r.coaching_context,
+                }
+                for r in matches
+            ],
+            "feedback": [
+                {
+                    "replay_id": f.replay_id,
+                    "finding_id": f.finding_id,
+                    "note": f.note,
+                    "inaccurate": f.inaccurate,
+                }
+                for f in db.scalars(
+                    select(Feedback).where(Feedback.replay_id.in_([r.id for r in matches]))
+                )
+                if any(
+                    e["id"] == f.finding_id and e["player_id"] == r.selected_player
+                    for r in matches
+                    if r.id == f.replay_id
+                    for e in r.findings
+                )
+            ],
             "matches": len(matches),
             "minutes": seconds / 60,
             "findings": sum(counts.values()),
