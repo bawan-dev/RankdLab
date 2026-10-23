@@ -16,7 +16,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import FileResponse, JSONResponse
 
 from app.analysis import RELIABILITY, VERSION, analyse, priorities, retreat_target
-from app.coaching import present, snapshot
+from app.coaching import present, snapshot, training_plan
 from app.config import ROOT, Settings
 from app.database import (
     Base,
@@ -543,13 +543,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             else "Automatic duel coaching is not supported: all current rules require a teammate. "
             "Zero flags here indicates a coverage gap, not an assessment of your decisions."
         )
-        if replay.engine_version == VERSION:
+        if replay.engine_version in (VERSION, "geometry-0.2.0"):
             mode = replay_format(replay)
             coverage_message = (
-                "Experimental duel exposure geometry only. Challenges, possession, boost decisions "
+                "Experimental exposure and movement candidates. Possession, boost decisions "
                 "and mechanics are not assessed. Zero flags does not mean mistake-free play."
                 if mode == "1v1"
-                else "Three experimental team rules. Rotation intent, challenge sequencing, "
+                else "Experimental team geometry and temporal coverage rules. Rotation intent, "
                 "boost and mechanics are not assessed. Zero flags does not mean mistake-free play."
             )
         elif not team_supported:
@@ -568,6 +568,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "findings": findings,
             "most_common_category": common,
             "priorities": recommendations,
+            "training_plan": training_plan(
+                findings,
+                replay.coaching_context,
+                replay.selected_player,
+                {
+                    f.finding_id
+                    for f in db.scalars(
+                        select(Feedback).where(
+                            Feedback.replay_id == replay.id, Feedback.inaccurate.is_(True)
+                        )
+                    )
+                },
+            ),
             "active_seconds": replay.metadata_json.get("active_seconds", 0),
             "engine_version": replay.engine_version,
             "reliability": RELIABILITY,

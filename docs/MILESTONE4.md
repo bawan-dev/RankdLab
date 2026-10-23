@@ -50,3 +50,14 @@ the team-level observation, without causal blame. A central defender suppresses
 the gap; an additional covering player suppresses advance. Twelve sequence and
 legacy-detector tests pass, including different formations. Challenge sequencing,
 rotation intent and aerial defensive coverage remain beyond these candidates.
+
+## E - rank context and practice priorities
+
+Plan: four communication levels, immutable analysis snapshots and honest repeated
+patterns. Context v2 records optional self-reported rank and distinct prior match
+counts by stable selected replay player. Bronze-Gold, Platinum-Diamond,
+Champion-GC and SSL receive different explanation detail without changing facts.
+A training objective requires candidates across at least two distinct matches;
+an isolated flag cannot establish a recurring weakness. Disputed current flags
+are excluded. Sixteen rank/context/plan tests pass. Suggested drills are authored
+review exercises, not measured training outcomes or skill benchmarks.
