@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { buildCar, dressStadium, contactShadow } from "./replayVisuals";
+import {
+  buildCar,
+  dressStadium,
+  contactShadow,
+  animateThrusters,
+} from "./replayVisuals";
+import { carBody } from "./carBodies";
 import type { Finding, ReplayData } from "./types";
 import {
   frameIndex,
@@ -9,6 +15,7 @@ import {
   toWorld,
   recordedSegments,
   tacticalFraming,
+  replayThrust,
 } from "./playback";
 
 export type CameraMode =
@@ -215,7 +222,10 @@ export default function Arena(props: Props) {
     const cars = new Map<string, THREE.Group>();
     const shadows = new Map<string, ReturnType<typeof contactShadow>>();
     for (const player of data.metadata.players) {
-      const car = buildCar(player.team === 0 ? "#338eff" : "#ff953e");
+      const car = buildCar(
+        player.team === 0 ? "#338eff" : "#ff953e",
+        carBody(player).model,
+      );
       scene.add(car);
       cars.set(player.id, car);
       const shadow = contactShadow(2);
@@ -348,7 +358,9 @@ export default function Arena(props: Props) {
     });
     resize.observe(host);
     let raf = 0,
-      last = performance.now();
+      last = performance.now(),
+      lastReplayTime = current.current.time,
+      lastPlayerId = current.current.playerId;
     const render = (now: number) => {
       const elapsed = Math.min(0.1, (now - last) / 1000);
       last = now;
@@ -359,13 +371,17 @@ export default function Arena(props: Props) {
         finding,
         zoom = 1,
       } = current.current;
+      const seeked =
+        Math.abs(time - lastReplayTime) > 0.25 || playerId !== lastPlayerId;
+      lastReplayTime = time;
+      lastPlayerId = playerId;
       const i = frameIndex(data.frames, time),
         a = data.frames[i],
         b = data.frames[Math.min(i + 1, data.frames.length - 1)];
       const span = b.time - a.time,
         alpha = span > 0 ? Math.max(0, Math.min(1, (time - a.time) / span)) : 0;
       const continuous = span < 0.25 && a.state === b.state;
-      const ballSample = interpolate(a.ball, b.ball, alpha, continuous);
+      const ballSample = interpolate(a.ball, b.ball, alpha, continuous, span);
       ball.visible = !!ballSample;
       ballShadow.visible = !!ballSample;
       if (ballSample) {
@@ -381,8 +397,23 @@ export default function Arena(props: Props) {
           b.players[id],
           alpha,
           continuous,
+          span,
         );
         car.visible = !!sample;
+        const thrust = replayThrust(data.frames, i, id, time);
+        animateThrusters(car, thrust, time);
+        if (id === playerId) {
+          renderer.domElement.dataset.carBody = car.userData.bodyModel;
+          renderer.domElement.dataset.boostActive = String(
+            car.visible && car.getObjectByName("boost-flame")!.visible,
+          );
+          renderer.domElement.dataset.jumpActive = String(
+            car.visible && car.getObjectByName("jump-flame")!.visible,
+          );
+          renderer.domElement.dataset.jumpThrust = (
+            car.visible ? thrust.jump : 0
+          ).toFixed(3);
+        }
         const shadow = shadows.get(id)!;
         shadow.visible = !!sample;
         if (sample) {
@@ -475,10 +506,10 @@ export default function Arena(props: Props) {
         target.copy(framing.target);
         position.copy(framing.position);
       }
-      const easing = window.matchMedia("(prefers-reduced-motion: reduce)")
-        .matches
-        ? 1
-        : 1 - Math.exp(-elapsed * 4);
+      const easing =
+        seeked || window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? 1
+          : 1 - Math.exp(-elapsed * 4);
       if (mode !== "free") {
         position.sub(target).divideScalar(zoom).add(target);
         camera.position.lerp(position, easing);

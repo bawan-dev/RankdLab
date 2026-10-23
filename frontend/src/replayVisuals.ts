@@ -23,9 +23,15 @@ export function contactShadow(radius: number) {
   return shadow;
 }
 
-// Original stylised assets. These are presentation geometry, not recovered car cosmetics.
-export function buildCar(color: string) {
+// Original body-specific reconstructions; no proprietary models or cosmetic assets.
+export function buildCar(color: string, model = "generic") {
   const car = new THREE.Group();
+  car.userData.bodyModel = model;
+  const octane = model === "octane",
+    fennec = model === "fennec";
+  const low = model === "dominus" || model === "breakout",
+    van = model === "merc";
+  const length = low ? 2.25 : 1.9;
   const paint = new THREE.MeshStandardMaterial({
     color,
     metalness: 0.65,
@@ -59,15 +65,77 @@ export function buildCar(color: string) {
     car.add(mesh);
     return mesh;
   }
-  part(1.85, 0.3, 1.12, 0, 0.18, 0, trim);
-  part(1.9, 0.42, 1.06, 0, 0.43, 0, paint);
-  const hood = part(0.8, 0.17, 0.98, 0.55, 0.66, 0, paint);
-  hood.rotation.z = -0.08;
-  const cabin = part(0.9, 0.4, 0.86, -0.2, 0.83, 0, glass);
-  cabin.rotation.z = 0.08;
-  part(0.65, 0.08, 0.92, -0.27, 1.06, 0, paint, 0.03);
-  part(0.06, 0.43, 0.91, -0.57, 0.82, 0, paint, 0.02);
-  part(0.08, 0.37, 0.89, 0.18, 0.83, 0, paint, 0.02);
+  part(length - 0.05, 0.22, octane ? 0.82 : 1.12, 0, 0.16, 0, trim);
+  part(length, low ? 0.25 : 0.35, octane ? 0.8 : 1.06, 0, 0.37, 0, paint);
+  const hood = part(
+    octane ? 0.9 : 0.8,
+    0.15,
+    octane ? 0.72 : 0.98,
+    0.55,
+    low ? 0.5 : 0.59,
+    0,
+    paint,
+  );
+  hood.rotation.z = octane ? -0.22 : -0.06;
+  const cabin = part(
+    van ? 1.5 : fennec ? 1.05 : 0.85,
+    van ? 0.65 : low ? 0.27 : 0.4,
+    octane ? 0.67 : 0.86,
+    van ? -0.03 : -0.2,
+    van ? 0.83 : low ? 0.65 : 0.77,
+    0,
+    glass,
+  );
+  cabin.rotation.z = octane ? -0.18 : low ? 0.16 : 0;
+  part(
+    van ? 1.58 : fennec ? 0.94 : 0.65,
+    0.08,
+    octane ? 0.72 : 0.92,
+    van ? -0.03 : -0.27,
+    van ? 1.17 : low ? 0.81 : 1,
+    0,
+    paint,
+    0.03,
+  );
+  part(
+    0.06,
+    van ? 0.65 : 0.4,
+    octane ? 0.7 : 0.91,
+    van ? -0.76 : -0.62,
+    van ? 0.83 : 0.75,
+    0,
+    paint,
+    0.02,
+  );
+  const pillar = part(
+    0.07,
+    low ? 0.25 : 0.38,
+    octane ? 0.69 : 0.89,
+    fennec ? 0.27 : 0.18,
+    low ? 0.65 : 0.77,
+    0,
+    paint,
+    0.02,
+  );
+  pillar.rotation.z = octane ? -0.25 : fennec ? -0.12 : 0.15;
+  // Octane's open wheel layout and nose; Fennec's squared hatch and wheel arches.
+  if (octane) {
+    for (const side of [-1, 1]) {
+      part(0.42, 0.11, 0.28, 0.66, 0.53, side * 0.5, paint, 0.04);
+      part(0.45, 0.15, 0.29, -0.66, 0.54, side * 0.5, paint, 0.04);
+      part(0.07, 0.25, 0.07, -0.74, 0.79, side * 0.44, trim, 0.01);
+    }
+    part(0.27, 0.09, 1.25, -0.85, 0.93, 0, paint, 0.02);
+    part(0.12, 0.16, 0.8, 1, 0.3, 0, trim, 0.02);
+  } else if (fennec || van) {
+    part(0.16, 0.29, 1.06, -0.88, 0.68, 0, paint, 0.025);
+    part(0.12, 0.14, 1.17, 0.99, 0.25, 0, trim, 0.02);
+    for (const side of [-1, 1]) {
+      for (const x of [-0.61, 0.61])
+        part(0.55, 0.12, 0.16, x, 0.47, side * 0.54, paint, 0.04);
+      part(0.04, 0.38, 0.9, -0.25, 0.75, 0, paint, 0.01);
+    }
+  }
   for (const side of [-1, 1]) {
     part(0.8, 0.04, 0.03, -0.19, 0.79, side * 0.45, trim, 0.01);
     part(1.6, 0.08, 0.07, 0, 0.26, side * 0.57, paint, 0.02);
@@ -75,7 +143,7 @@ export function buildCar(color: string) {
       0.08,
       0.12,
       0.27,
-      0.98,
+      length / 2 + 0.03,
       0.48,
       side * 0.32,
       new THREE.MeshBasicMaterial({ color: "#e7f6ff" }),
@@ -85,7 +153,7 @@ export function buildCar(color: string) {
       0.06,
       0.1,
       0.3,
-      -0.98,
+      -length / 2 - 0.03,
       0.48,
       side * 0.3,
       new THREE.MeshBasicMaterial({ color: "#ff4b4b" }),
@@ -120,11 +188,83 @@ export function buildCar(color: string) {
       car.add(hub);
     }
   }
-  part(0.28, 0.06, 1.16, -0.77, 0.91, 0, paint, 0.02);
+  if (!octane && !van)
+    part(0.28, 0.06, 1.16, -0.77, low ? 0.68 : 0.91, 0, paint, 0.02);
   part(0.03, 0.025, 0.68, 0.55, 0.76, 0, trim, 0.01);
   // Modest visual emphasis keeps silhouettes readable at tactical distances.
   car.scale.setScalar(1.35);
+  car.add(buildThrusters());
   return car;
+}
+
+function buildThrusters() {
+  const root = new THREE.Group();
+  root.name = "thrusters";
+  const boost = new THREE.Group(),
+    jump = new THREE.Group();
+  boost.name = "boost-flame";
+  jump.name = "jump-flame";
+  const outer = new THREE.MeshBasicMaterial({
+    color: "#36aaff",
+    transparent: true,
+    opacity: 0.55,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const inner = new THREE.MeshBasicMaterial({
+    color: "#f0faff",
+    transparent: true,
+    opacity: 0.9,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  // A cone's tip is +Y. Rotate the entire emitter into the car's local thrust direction.
+  function nozzle(
+    parent: THREE.Group,
+    x: number,
+    y: number,
+    z: number,
+    rear: boolean,
+  ) {
+    const emitter = new THREE.Group();
+    emitter.position.set(x, y, z);
+    emitter.rotation.z = rear ? Math.PI / 2 : Math.PI;
+    for (const [radius, length, material] of [
+      [0.21, 1.9, outer],
+      [0.1, 1.1, inner],
+    ] as const) {
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(radius, length, 12, 1, true),
+        material,
+      );
+      flame.position.y = length / 2;
+      emitter.add(flame);
+    }
+    parent.add(emitter);
+  }
+  for (const side of [-1, 1]) nozzle(boost, -1, 0.3, side * 0.29, true);
+  for (const x of [-0.55, 0.55])
+    for (const side of [-1, 1]) nozzle(jump, x, 0.03, side * 0.33, false);
+  boost.visible = jump.visible = false;
+  root.add(boost, jump);
+  return root;
+}
+
+export function animateThrusters(
+  car: THREE.Group,
+  thrust: { boost: boolean; jump: number },
+  time: number,
+) {
+  const boost = car.getObjectByName("boost-flame")!,
+    jump = car.getObjectByName("jump-flame")!;
+  boost.visible = thrust.boost;
+  jump.visible = thrust.jump > 0;
+  // Replay time rather than wall time: effects freeze on pause and repeat on seek.
+  const flicker = 0.9 + 0.1 * Math.sin(time * 93) + 0.06 * Math.sin(time * 157);
+  boost.scale.set(flicker, 1, 1);
+  jump.scale.set(1, Math.max(0.01, thrust.jump) * 0.65, 1);
 }
 
 export function dressStadium(scene: THREE.Scene) {

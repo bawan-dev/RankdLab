@@ -6,6 +6,10 @@ export type Actor = {
   rotation: Rotation;
   velocity: Vec3 | null;
   boost: number | null;
+  boost_active?: boolean | null;
+  jump_active?: boolean | null;
+  double_jump_active?: boolean | null;
+  dodge_active?: boolean | null;
 };
 export type Frame = {
   time: number;
@@ -19,6 +23,8 @@ export type Player = {
   id: string;
   name: string;
   team: number;
+  car_body_id?: number | null;
+  car_hitbox_family?: string | null;
   stats: Record<string, number | null>;
 };
 export type Goal = { time: number; team: number; score: (number | null)[] };

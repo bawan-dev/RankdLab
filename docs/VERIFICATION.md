@@ -164,3 +164,61 @@ Screenshots inspected locally under .research/screenshots, including
 replay-car-detail.png and genuine-rule-coaching.png. An initial test run during
 live edits failed playback advancement; the isolated test and final unchanged
 full-suite rerun passed. No backend rules, thresholds or account data changed.
+
+## Recorded car bodies and thrust - 2026-10-23
+
+The adapter previously discarded the native parser's car body IDs and replicated
+boost/jump component states. Adapter `native-actions-3` retains `car_body_id`,
+`car_hitbox_family`, `boost_active`, `jump_active`, `double_jump_active` and
+`dodge_active`. Unknown fields remain null; older caches remain readable with
+effects disabled when telemetry is absent.
+
+Octane and Fennec select distinct original silhouettes by product ID, despite
+sharing a hitbox family. All nine local user replays contained only IDs 23 and
+4284. Basic Dominus, Breakout and Merc silhouettes are also supported; unrecognised
+IDs use a generic reconstruction labelled with the recorded ID. These are
+stylised original geometry, not the game's production meshes, painted cosmetics,
+decals or equipped boost assets. The Fennec ID mapping is documented in the
+[ballchasing API](https://ballchasing.com/doc/api); legacy IDs are listed in
+[Octane's body catalog](https://hackage.haskell.org/package/octane-0.11.0/src/library/Octane/Data/Bodies.hs).
+
+Rear exhaust follows recorded boost-active state. Four local underbody emitters
+produce an 180 ms fading burst at recorded jump, double-jump or dodge rising
+edges. Missing samples, state changes and teleports break edge continuity.
+Effects use replay time, freeze when paused, and reproduce when seeking; altitude,
+speed and a falling boost gauge never substitute for recorded activation.
+Between continuous samples, movement uses bounded Hermite interpolation with
+recorded endpoint velocities and quaternion slerp. Impacts/inconsistent velocities
+fall back to linear interpolation. Gaps and resets retain the existing guards.
+Large seeks immediately reframe the automatic camera to avoid losing the car.
+The final interpolation guards accepted 32,425 of 35,225 moving player segments
+in doubles and 3,736 of 4,240 in duel; remaining segments use the linear fallback.
+
+Fresh native parser runs verified the following active **player-frame samples**
+(not independent jump/boost event counts):
+
+| Genuine fixture | Frames | Boost | Jump | Double jump | Dodge |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Doubles | 9,530 | 6,819 | 748 | 95 | 3,248 |
+| Duel | 2,523 | 1,156 | 115 | 10 | 721 |
+| Season 24 standard | 7,501 | 9,390 | 1,098 | 152 | 4,444 |
+
+The two existing local frame caches were upgraded using
+`uv run --project backend --no-sync python scripts/upgrade-replay-visuals.py --data-dir data`.
+The utility refuses changed identity, timing, sample coverage or physics, saves
+the previous cache, and atomically replaces the frame JSON. The 10,075 and 10,314
+frame caches matched every legacy field after removing only the additive visual
+fields/version marker. Database reports, findings, notes and progress were not
+rewritten. This utility is explicit; it does not reparse caches on an HTTP GET.
+
+Validation: 79 backend tests, Ruff lint/format and mypy passed. All 12 frontend
+unit tests, ESLint, Prettier and TypeScript/Vite production build passed. Chromium
+coverage passed all six workflows (1.5 minutes), including genuine upload,
+ID-based model switching, actual flame-group
+visibility on recorded boost/jump samples, absence on idle samples, frozen paused
+effects, interactive cameras, coaching/Continue, feedback, reports and deletion.
+Inspected local screenshots include `replay-car-detail.png`,
+`replay-fennec-detail.png`, `replay-recorded-boost.png` and
+`replay-recorded-jump.png`. Initial browser harness failures involved an evicted
+inspector response body and range-input string formatting; the harness now reads
+the authenticated frames response directly and uses canonical slider values.

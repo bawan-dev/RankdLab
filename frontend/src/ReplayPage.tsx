@@ -21,6 +21,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, message } from "./api";
 import Arena from "./Arena";
+import { carBody } from "./carBodies";
 import ReviewWorkbench, { FindingRating } from "./ReviewWorkbench";
 import type { CameraMode } from "./Arena";
 import { continueCoaching, frameIndex, nextMoment } from "./playback";
@@ -538,7 +539,7 @@ function CoachingViewer({
               <div className="stage-bottom">
                 <span>
                   <span className="team-dot" />
-                  {player?.name}
+                  {player?.name} · {player ? carBody(player).name : ""}
                 </span>
                 <span>
                   {active

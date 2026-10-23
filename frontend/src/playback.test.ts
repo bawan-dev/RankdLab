@@ -6,6 +6,7 @@ import {
   nextMoment,
   recordedSegments,
   tacticalFraming,
+  replayThrust,
   toRotation,
   toWorld,
 } from "./playback";
@@ -16,6 +17,60 @@ const actor = (x: number): Actor => ({
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   velocity: null,
   boost: 33,
+});
+
+test("velocity interpolation is bounded, matches endpoints and falls back at impacts", () => {
+  const a = { ...actor(0), velocity: { x: 500, y: 0, z: 0 } };
+  const b = { ...actor(75), velocity: { x: 1000, y: 0, z: 0 } };
+  expect(interpolate(a, b, 0, true, 0.1)?.position.x).toBe(0);
+  expect(interpolate(a, b, 1, true, 0.1)?.position.x).toBe(0.75);
+  expect(interpolate(a, b, 0.5, true, 0.1)?.position.x).toBeCloseTo(0.3125);
+  expect(
+    interpolate(a, { ...b, velocity: { x: -2000, y: 0, z: 0 } }, 0.5, true, 0.1)
+      ?.position.x,
+  ).toBe(0.375);
+  expect(interpolate(a, b, 0.5, false, 0.1)?.position.x).toBe(0);
+  const fast = { ...actor(0), velocity: { x: 3000, y: 0, z: 0 } };
+  for (const alpha of [0.1, 0.2, 0.4, 0.7, 0.9]) {
+    expect(
+      interpolate(
+        fast,
+        { ...fast, position: actor(100).position },
+        alpha,
+        true,
+        0.1,
+      )?.position.x,
+    ).toBeCloseTo(alpha); // Inconsistent velocities select linear for the entire segment.
+  }
+});
+
+test("thrust follows recorded actions and replay time, never altitude or boost amount", () => {
+  const frames: Frame[] = Array.from({ length: 8 }, (_, i) => ({
+    time: i * 0.05,
+    source_time: i * 0.05,
+    state: "Active",
+    seconds_remaining: 300,
+    ball: null,
+    players: {
+      a: {
+        ...actor(i * 20),
+        boost_active: i === 2,
+        jump_active: i === 2,
+        double_jump_active: i === 6,
+        dodge_active: false,
+      },
+    },
+  }));
+  expect(replayThrust(frames, 0, "a", 0)).toEqual({ boost: false, jump: 0 });
+  expect(replayThrust(frames, 2, "a", 0.1)).toEqual({ boost: true, jump: 1 });
+  expect(replayThrust(frames, 3, "a", 0.15).jump).toBeCloseTo(1 - 0.05 / 0.18);
+  expect(replayThrust(frames, 6, "a", 0.3).jump).toBeCloseTo(1);
+  expect(replayThrust(frames, 2, "a", 0.1)).toEqual({ boost: true, jump: 1 });
+  frames[1].players.a = null;
+  expect(replayThrust(frames, 2, "a", 0.1).jump).toBe(0);
+  frames[2].players.a = { ...actor(40), boost: 100 };
+  expect(replayThrust(frames, 2, "a", 0.1)).toEqual({ boost: false, jump: 0 });
+  expect(replayThrust(frames, 7, "a", 5)).toEqual({ boost: false, jump: 0 });
 });
 
 test("tactical camera includes relevant positions in portrait and landscape", () => {

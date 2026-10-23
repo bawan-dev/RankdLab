@@ -101,6 +101,23 @@ def test_real_replay_pipeline(authenticated, application, genuine_replay):
     assert times == sorted(times)
     assert len({json.dumps(f["ball"]["position"]) for f in data["frames"] if f["ball"]}) > 1000
     player = result["metadata"]["players"][0]
+    assert player["car_body_id"] == 23
+    assert player["car_hitbox_family"] == "Octane"
+    assert {p["car_body_id"] for p in data["metadata"]["players"]} == {23, 4284}
+    for action, expected in (
+        ("boost_active", 2125),
+        ("jump_active", 171),
+        ("double_jump_active", 31),
+        ("dodge_active", 904),
+    ):
+        assert (
+            sum(
+                f["players"][player["id"]].get(action) is True
+                for f in data["frames"]
+                if f["players"][player["id"]] is not None
+            )
+            == expected
+        )
     saved = authenticated.put(
         f"/api/replays/{replay_id}/session",
         json={"player_id": player["id"], "time": 20, "reviewed_ids": []},
