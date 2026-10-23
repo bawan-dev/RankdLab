@@ -15,3 +15,14 @@ clock resets and teleports. Travel time is an optimistic bound to the current ba
 point, not an interception-order prediction. Low chassis is not grounded proof.
 Touches, possession, demolition and boost-pad opportunities remain unavailable.
 Five tactical and genuine-parser compatibility tests pass. No parser rewrite.
+
+## B - Duel sequences
+
+Plan: preserve exposure and add last-cover advance plus widening recovery drift.
+Both run only in 1v1, require a low central goalward ball with a nearby opponent,
+complete timestamp history and recorded subject velocity. Advance inspects two
+seconds of prior coverage; drift measures one second of increasing goal distance
+and lateral displacement. Both require a further .7 seconds of qualifying samples.
+Tests cover positives, pressure/ball-direction/aerial/velocity negatives, direction
+symmetry and missing frames between sampled evaluations. No touch/blame inference.
+Existing exposure remains a separate, versioned rule. Genuine evaluation is in H.
