@@ -1471,3 +1471,42 @@ p {
     height: 44px;
   }
 }
+
+.review-workbench,
+.training-plan {
+  padding: 24px;
+  margin: 24px 0;
+}
+.review-workbench summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+}
+.review-workbench > p {
+  margin: 16px 0;
+  font-size: 13px;
+}
+.review-workbench form {
+  max-width: 720px;
+  display: grid;
+  gap: 18px;
+  margin: 24px 0;
+}
+.review-records article {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.review-records p,
+.training-plan p {
+  font-size: 13px;
+  margin: 12px 0;
+}
+.finding-rating {
+  margin-top: 18px;
+}
+.finding-rating small {
+  font-size: 11px;
+}
+.training-plan article {
+  margin-top: 18px;
+}

@@ -75,3 +75,19 @@ unit tests (including camera projection bounds), seven alternatives/legacy backe
 tests and all six genuine-browser workflows pass. The backup also needed the
 already-identified duplicate Skip link and missing CI fixture fixes; applied here
 without touching the original repository. No production coaching accuracy claim.
+
+## G - human review, feedback and evaluation
+
+Plan: separate versioned owner review records from untouched automatic findings,
+subjective ratings and legacy binary ML labels. Added a non-destructive migration,
+three review judgements, bounded time windows, category/player/finding validation,
+optional reviewer-proposed areas and four feedback ratings. Owner review moments
+open the same director. Versioned export omits account identity and filenames;
+features preserve missing values. Original labels/ML experiments remain available.
+Reviewed-window evaluation requires external expert provenance before producing
+metrics; ordinary account-owner labels cannot become production accuracy data.
+Sixty-six backend tests pass, one optional private test skips without its variable;
+six browser tests pass including saved owner reviews/feedback and Continue in all
+three real formats. Account isolation, invalid ranges, preservation, export and
+cascading deletion are covered. No qualified expert dataset is available; no model
+was trained and no real precision/recall is claimed.

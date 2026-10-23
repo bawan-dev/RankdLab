@@ -82,6 +82,15 @@ class Feedback(Base):
     inaccurate: Mapped[bool] = mapped_column(Boolean, default=True)
     note: Mapped[str] = mapped_column(String(1000), default="")
     created_at: Mapped[float] = mapped_column(Float, default=now)
+    rating: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+
+class TacticalReview(Base):
+    __tablename__ = "tactical_reviews"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=uid)
+    replay_id: Mapped[str] = mapped_column(ForeignKey("replays.id", ondelete="CASCADE"), index=True)
+    data: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[float] = mapped_column(Float, default=now)
 
 
 class ReviewLabel(Base):

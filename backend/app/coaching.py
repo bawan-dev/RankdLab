@@ -4,7 +4,7 @@ from collections import Counter
 
 from sqlalchemy import select
 
-from app.database import RankRecord, Replay, now
+from app.database import Feedback, RankRecord, Replay, TacticalReview, now
 from app.playlists import replay_format
 from app.profiles import rank_dict
 
@@ -44,17 +44,38 @@ def snapshot(db, user_id: str, playlist: str | None, replay_id: str) -> dict:
             continue
         matches += 1
         if replay.selected_player:
+            disputed = {
+                f.finding_id
+                for f in db.scalars(
+                    select(Feedback).where(
+                        Feedback.replay_id == replay.id, Feedback.inaccurate.is_(True)
+                    )
+                )
+            }
+            decisions = {}
+            for review in db.scalars(
+                select(TacticalReview)
+                .where(TacticalReview.replay_id == replay.id)
+                .order_by(TacticalReview.created_at)
+            ):
+                if review.data.get("finding_id"):
+                    decisions[review.data["finding_id"]] = review.data["label"]
+            disputed.update(k for k, v in decisions.items() if v != "confirmed_issue")
             history_matches.setdefault(replay.selected_player, Counter()).update(
                 {
                     f["category"]
                     for f in replay.findings
-                    if f["source"] == "rule" and f["player_id"] == replay.selected_player
+                    if f["source"] == "rule"
+                    and f["player_id"] == replay.selected_player
+                    and f["id"] not in disputed
                 }
             )
             history.setdefault(replay.selected_player, Counter()).update(
                 f["category"]
                 for f in replay.findings
-                if f["source"] == "rule" and f["player_id"] == replay.selected_player
+                if f["source"] == "rule"
+                and f["player_id"] == replay.selected_player
+                and f["id"] not in disputed
             )
     return {
         "version": VERSION,

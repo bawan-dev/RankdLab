@@ -15,6 +15,15 @@ import { formatTime } from "./time";
 import { ErrorMessage, Loading, PageHeader } from "./ui";
 
 type Report = {
+  training_plan?: {
+    message: string;
+    objectives: {
+      category: string;
+      observations: number;
+      matches: number;
+      practice: string;
+    }[];
+  };
   coaching_context?: Replay["coaching_context"];
   replay_id: string;
   filename: string;
@@ -130,6 +139,22 @@ export default function ReportPage() {
           </div>
         ))}
       </div>
+      {report.training_plan && (
+        <section className="panel training-plan">
+          <h2>Your next practice focus</h2>
+          <p>{report.training_plan.message}</p>
+          {report.training_plan.objectives.map((o) => (
+            <article key={o.category}>
+              <h3>{o.category.replaceAll("_", " ")}</h3>
+              <p>
+                {o.observations} candidate observations across {o.matches}{" "}
+                matches.
+              </p>
+              <p>{o.practice}</p>
+            </article>
+          ))}
+        </section>
+      )}
       <div className="two-columns report-summary">
         <section className="panel focus-card">
           <p className="eyebrow">IMPROVEMENT PRIORITIES</p>

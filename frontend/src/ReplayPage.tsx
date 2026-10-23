@@ -21,6 +21,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, message } from "./api";
 import Arena from "./Arena";
+import ReviewWorkbench, { FindingRating } from "./ReviewWorkbench";
 import type { CameraMode } from "./Arena";
 import { continueCoaching, frameIndex, nextMoment } from "./playback";
 import type { CoachingState } from "./playback";
@@ -801,6 +802,15 @@ function CoachingViewer({
                     Continue <ArrowRight size={15} />
                   </button>
                 </div>
+                <FindingRating
+                  key={active.id}
+                  replayId={replay.id}
+                  finding={active}
+                  initialRating={
+                    replay.feedback?.find((f) => f.finding_id === active.id)
+                      ?.rating
+                  }
+                />
                 <button
                   className={`feedback-button ${noted.includes(active.id) ? "is-noted" : ""}`}
                   disabled={feedbackBusy}
@@ -874,6 +884,30 @@ function CoachingViewer({
           </aside>
         </div>
       )}
+      {playerId && (
+        <ReviewWorkbench
+          key={playerId}
+          replay={replay}
+          playerId={playerId}
+          time={time}
+          active={active}
+          onUpdate={onUpdate}
+          onOpen={(r) => {
+            const f = events.find(
+              (e) =>
+                e.id === r.finding_id ||
+                (e.source === "manual" &&
+                  e.category === r.category &&
+                  e.time === r.end),
+            );
+            if (f) review(f);
+            else {
+              setPlaying(false);
+              seek(r.end);
+            }
+          }}
+        />
+      )}
       {manual && (
         <dialog
           ref={noteDialog}
@@ -894,8 +928,8 @@ function CoachingViewer({
             </p>
             <h2 id="note-title">What deserves another look?</h2>
             <p>
-              Your note will pause the replay and show a suggested retreat arrow
-              toward your own half.
+              Your note will pause the replay for review. No alternative route
+              is inferred from a written note.
             </p>
             <label>
               Title

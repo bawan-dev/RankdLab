@@ -26,6 +26,7 @@ from app.database import (
     Replay,
     ReviewLabel,
     RocketProfile,
+    TacticalReview,
     User,
     connect,
     now,
@@ -36,6 +37,7 @@ from app.features import extract_features
 from app.middleware import RequestGuard
 from app.playlists import classify, needs_confirmation, replay_format
 from app.profiles import Playlist, RankInput, RocketProfileInput, rank_dict
+from app.reviews import register_routes
 from app.security import COOKIE, DUMMY_HASH, RateLimiter, new_token, passwords, token_hash
 from app.worker import ReplayWorker
 
@@ -61,6 +63,7 @@ class SessionUpdate(BaseModel):
 
 
 class FeedbackInput(BaseModel):
+    rating: Literal["helpful", "not_helpful", "incorrect", "unsure"] | None = None
     inaccurate: bool = True
     note: str = Field(default="", max_length=1000)
 
@@ -388,7 +391,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         replay = owned(replay_id, user, db)
         result = replay_dict(replay)
         result["feedback"] = [
-            {"finding_id": f.finding_id, "inaccurate": f.inaccurate, "note": f.note}
+            {
+                "finding_id": f.finding_id,
+                "inaccurate": f.inaccurate,
+                "note": f.note,
+                "rating": f.rating,
+            }
             for f in db.scalars(select(Feedback).where(Feedback.replay_id == replay.id))
         ]
         return result
@@ -515,9 +523,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if item is None:
             item = Feedback(replay_id=replay.id, finding_id=finding_id)
             db.add(item)
-        item.inaccurate, item.note = payload.inaccurate, payload.note
+        item.inaccurate = payload.rating == "incorrect" if payload.rating else payload.inaccurate
+        item.note = payload.note
+        item.rating = payload.rating
         db.commit()
-        return {"finding_id": item.finding_id, "inaccurate": item.inaccurate, "note": item.note}
+        return {
+            "finding_id": item.finding_id,
+            "inaccurate": item.inaccurate,
+            "note": item.note,
+            "rating": item.rating,
+        }
 
     @application.get("/api/replays/{replay_id}/report")
     def report(replay_id: str, user: Owner, db: Db):
@@ -531,6 +546,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             [f for f in replay.findings if f["player_id"] == replay.selected_player],
             replay.coaching_context,
         )
+        review_decisions = {}
+        for review in db.scalars(
+            select(TacticalReview)
+            .where(TacticalReview.replay_id == replay.id)
+            .order_by(TacticalReview.created_at)
+        ):
+            if review.data.get("finding_id"):
+                review_decisions[review.data["finding_id"]] = review.data["label"]
+        excluded_reviews = {k for k, v in review_decisions.items() if v != "confirmed_issue"}
         common, recommendations = priorities(findings)
         team_supported = any(
             p["id"] != player["id"] and p["team"] == player["team"]
@@ -573,7 +597,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 findings,
                 replay.coaching_context,
                 replay.selected_player,
-                {
+                excluded_reviews
+                | {
                     f.finding_id
                     for f in db.scalars(
                         select(Feedback).where(
@@ -587,7 +612,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "reliability": RELIABILITY,
             "coverage": {"team_rules_supported": team_supported, "message": coverage_message},
             "feedback": [
-                {"finding_id": f.finding_id, "inaccurate": f.inaccurate, "note": f.note}
+                {
+                    "finding_id": f.finding_id,
+                    "inaccurate": f.inaccurate,
+                    "note": f.note,
+                    "rating": f.rating,
+                }
                 for f in db.scalars(select(Feedback).where(Feedback.replay_id == replay.id))
             ],
         }
@@ -826,4 +856,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         db.commit()
         response.delete_cookie(COOKIE, path="/api")
 
+    register_routes(application, current_user, database, owned, config)
     return application

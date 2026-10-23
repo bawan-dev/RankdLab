@@ -21,6 +21,18 @@ test('three real formats, mismatch correction, isolated histories and responsive
     await expect(page.getByRole('heading',{name:'Who are you in this match?'})).toBeVisible({timeout:45000});
     await page.locator('.player-option').first().click();
     await expect(page.getByRole('img',{name:'3D reconstruction of recorded replay positions'})).toBeVisible();
+    await page.getByLabel('Replay timeline').fill('20');
+    await page.getByText('Review or correct a tactical situation',{exact:true}).click();
+    await page.getByRole('button',{name:'Use current moment'}).click();
+    await page.getByLabel('Reviewer explanation').fill('QA owner review of genuine recorded data; uncertainty retained.');
+    await page.getByRole('button',{name:'Save tactical review',exact:true}).click();
+    await expect(page.getByText('Tactical review saved.',{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Open reviewed situation',exact:true}).click();
+    await expect(page.getByText('Paused for review',{exact:true})).toBeVisible();
+    await page.getByLabel('Finding usefulness').selectOption('unsure');
+    await expect(page.getByText('Feedback saved. This is not an objective review label.')).toBeVisible();
+    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await page.getByRole('button',{name:'Pause replay',exact:true}).click();
     await page.getByRole('link',{name:'Match report'}).click();
     await expect(page.getByRole('heading',{name:'Match coaching report'})).toBeVisible();
     await expect(page.locator('.report-context')).toContainText(mode);

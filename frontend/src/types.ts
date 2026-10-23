@@ -93,7 +93,12 @@ export type Replay = {
   session_time: number;
   reviewed_ids: string[];
   engine_version: string;
-  feedback?: { finding_id: string; inaccurate: boolean; note: string }[];
+  feedback?: {
+    finding_id: string;
+    inaccurate: boolean;
+    note: string;
+    rating?: string | null;
+  }[];
 };
 export type ReplayData = {
   schema_version: number;
