@@ -1520,3 +1520,59 @@ p {
     padding: 10px;
   }
 }
+
+/* Replay studio: arena owns the width; review and team detail follow below. */
+.coaching-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.viewer-stage {
+  height: clamp(560px, 70vh, 950px);
+  border-radius: 16px 16px 0 0;
+}
+.coach-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(240px, 1fr);
+}
+.coach-panel-header {
+  grid-column: 1/-1;
+}
+.moment-list {
+  border-left: 1px solid var(--line);
+}
+.replay-zoom {
+  min-width: 200px;
+  flex: 1;
+  max-width: 320px;
+}
+.replay-zoom input {
+  width: 100%;
+  accent-color: var(--blue);
+}
+.camera-hint {
+  width: 100%;
+  font-size: 12px;
+}
+.arena canvas {
+  touch-action: none;
+}
+.arena canvas:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -3px;
+}
+@media (max-width: 640px) {
+  .viewer-stage {
+    height: 58vh;
+    min-height: 380px;
+    max-height: 600px;
+  }
+  .coach-panel {
+    display: block;
+  }
+  .moment-list {
+    border-left: 0;
+  }
+  .replay-zoom {
+    max-width: none;
+    width: 100%;
+  }
+}

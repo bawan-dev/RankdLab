@@ -141,3 +141,26 @@ environment, not asserted from a previous assistant's report:
   excludes local data, secrets and generated dependency directories.
 
 See [MILESTONE3_HANDOFF.md](MILESTONE3_HANDOFF.md).
+
+
+## Replay studio visual upgrade - 2026-10-23
+
+Backup workspace only. Replaced the small block-car presentation with original
+rounded car bodywork, glass, tires/rims, lights and spoilers; added striped turf,
+soft contact shadows, goal nets, seating and floodlight geometry. Cars are
+stylised presentation assets, not reconstructed cosmetics or collision hitboxes.
+No simulated boost/throttle animation was added without recorded action evidence.
+The arena spans the workspace width with a taller responsive stage; coaching
+and team detail remain available below it. Director follows recorded local play;
+player view is closer. Added camera zoom, reset and free orbit with drag/pan/wheel
+and keyboard panning. Overhead framing adapts to portrait aspect. Existing
+interpolation, player identity, analysis and stored replay data are unchanged.
+
+Validation: 8 frontend unit tests, 6 Chromium E2E workflows (1.4 minutes), ESLint,
+Prettier and TypeScript/Vite build passed. Genuine replay tests assert player
+focus, actual camera-distance change on zoom, drag-driven orbit, reset, playback,
+automatic coaching/annotations/Continue, notes, reports and responsive layout.
+Screenshots inspected locally under .research/screenshots, including
+replay-car-detail.png and genuine-rule-coaching.png. An initial test run during
+live edits failed playback advancement; the isolated test and final unchanged
+full-suite rerun passed. No backend rules, thresholds or account data changed.
