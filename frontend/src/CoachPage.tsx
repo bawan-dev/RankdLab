@@ -297,12 +297,12 @@ export function CoachPage() {
           <h3>{mode.focus}</h3>
           <p>
             {mode.id === "1v1"
-              ? "Candidate coverage: sustained goalward ball exposure with an opponent nearby."
+              ? "Current candidates: goal exposure, advance out of sole coverage and widening recovery under pressure."
               : mode.id === "2v2"
-                ? "Candidate coverage: simultaneous same-side challenges, defensive spacing and exposed coverage."
-                : "Candidate coverage: defensive bunching under pressure, overlapping challenges and exposed coverage."}
+                ? "Current candidates: double commits, spacing, exposure, second-man advances and uncovered recovery."
+                : "Current candidates: bunching, double commits, exposure, third-man advances and central coverage gaps."}
           </p>
-          <span className="badge">EXPERIMENTAL GEOMETRY RULES</span>
+          <span className="badge">EXPERIMENTAL TACTICAL RULES</span>
         </div>
       </section>
       <div className="stat-grid">

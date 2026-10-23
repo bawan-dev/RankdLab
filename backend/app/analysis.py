@@ -307,6 +307,7 @@ def analyse(
         players={},
     )
     history = TemporalWindow()
+    interpretation_metadata = {**data["metadata"], "events": data.get("events", {})}
     for frame in data["frames"]:
         time = frame["time"]
         audit["frames"]["visited"] += 1
@@ -348,7 +349,7 @@ def analyse(
             starts.clear()
             continue
         audit["frames"]["sampled_complete"] += 1
-        state = interpret(frame, data["metadata"])
+        state = interpret(frame, interpretation_metadata)
         for player in players:
             teammates = [
                 frame["players"][p["id"]]

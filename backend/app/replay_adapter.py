@@ -116,9 +116,28 @@ def normalize(raw: dict, names: list[str], game_type: str) -> dict:
             initial_score[team] = max(0, initial_score[team] - 1)
     elif final_score == [0, 0]:
         initial_score = [0, 0]
+    events: dict = {}
+    known = {p["id"] for p in players}
+    for source, category in (
+        ("touch_events", "touches"),
+        ("demolish_infos", "demolitions"),
+        ("boost_pad_events", "boost_pads"),
+    ):
+        events[category] = [] if source in raw else None
+        for event in raw.get(source, []):
+            if not isinstance(event.get("time"), (int, float)):
+                continue
+            item = {"time": max(0, event["time"] - origin), "source": "parser-derived"}
+            for key in ("player", "attacker", "victim"):
+                if key in event:
+                    identity = player_key(event[key]) if event[key] is not None else None
+                    item[key + "_id"] = identity if identity in known else None
+            events[category].append(item)
     return {
         "schema_version": 1,
         "parser_version": PARSER_VERSION,
+        "adapter_version": "native-events-2",
+        "events": events,
         "metadata": {
             "classification": classify({"players": players}, headers),
             "team_size": headers.get("TeamSize"),

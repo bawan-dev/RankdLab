@@ -54,3 +54,19 @@ def test_temporal_interruptions_and_duplicate_samples():
     window.push(f, data["metadata"]["players"])
     assert window.reason == "gap_teleport_or_clock_reset"
     assert window.before(0.1) is None
+
+
+def test_clock_and_event_uncertainty_are_not_filled_with_defaults():
+    data = data_for(scenario())
+    frame = data["frames"][0]
+    frame["seconds_remaining"] = 30
+    state = interpret(
+        frame,
+        {
+            **data["metadata"],
+            "events": {"touches": [{"time": 0, "player_id": None, "source": "parser-derived"}]},
+        },
+    )
+    assert state.overtime is None
+    assert state.recent_events["touches"][0]["player_id"] is None
+    assert state.players["a"].features["possession"] is None

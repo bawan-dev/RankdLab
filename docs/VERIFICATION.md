@@ -1,5 +1,22 @@
 # Verification ledger
 
+## Milestone 4 - 2026-10-23
+
+Backup-only implementation on feat/milestone4-intelligence. See [MILESTONE4.md](MILESTONE4.md),
+[DETECTOR_CATALOG.md](DETECTOR_CATALOG.md), [COACHING_ARCHITECTURE.md](COACHING_ARCHITECTURE.md)
+and [EVALUATION.md](EVALUATION.md).
+
+- 73 backend tests passed, including genuine parser/private detection and migrations.
+- 8 frontend unit tests and 6 Chromium end-to-end workflows passed.
+- Backend lint/format/mypy and frontend lint/format/type-check/build passed.
+- Three public and nine private replays audited read-only; six new sequence rules
+  produced no qualifying flags. One legacy opponent exposed-goal flag remains.
+- Owner reviews and feedback persist separately; no expert accuracy metrics available.
+- All pre-existing backup database values compared equal after the additive migration.
+- Compose configuration passed; Docker/PostgreSQL runtime unavailable.
+- One upstream httpx deprecation warning. No push, deployment or production model.
+
+
 ## Coaching detection investigation — 2026-10-22
 
 See [DETECTION_INVESTIGATION.md](DETECTION_INVESTIGATION.md) for the root cause,

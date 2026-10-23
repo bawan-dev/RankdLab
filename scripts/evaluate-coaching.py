@@ -10,8 +10,6 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("dataset", type=Path)
 args = parser.parse_args()
 records = [
-    json.loads(line)
-    for line in args.dataset.read_text(encoding="utf-8").splitlines()
-    if line
+    json.loads(line) for line in args.dataset.read_text(encoding="utf-8").splitlines() if line
 ]
 print(json.dumps(evaluate(records), indent=2))

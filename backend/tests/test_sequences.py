@@ -108,3 +108,34 @@ def test_standard_third_man_and_central_gap_with_multiple_formations():
     assert not any(
         f["category"] == "standard_central_coverage_gap" for f in analyse(data, "central")[0]
     )
+
+
+@pytest.mark.parametrize("mode", [1, 2, 3])
+def test_advance_is_direction_symmetric_and_deterministic(mode):
+    data = sequence(mode=mode)
+    first = analyse(data, "same")[0]
+    assert first == analyse(data, "same")[0]
+    mirrored = deepcopy(data)
+    for p in mirrored["metadata"]["players"]:
+        p["team"] = 1 - p["team"]
+    for frame in mirrored["frames"]:
+        for actor_data in [frame["ball"], *frame["players"].values()]:
+            for field in ("position", "velocity"):
+                actor_data[field]["x"] *= -1
+                actor_data[field]["y"] *= -1
+    assert [(f["category"], f["time"]) for f in first] == [
+        (f["category"], f["time"]) for f in analyse(mirrored, "mirror")[0]
+    ]
+
+
+def test_timestamp_sampling_is_not_bound_to_recording_frame_rate():
+    moments = []
+    for hz in (20, 60):
+        moments.append(
+            next(
+                f["time"]
+                for f in analyse(sequence(hz=hz), "rate")[0]
+                if f["category"] == "duel_cover_advance"
+            )
+        )
+    assert abs(moments[0] - moments[1]) < 0.25

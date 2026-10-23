@@ -2,7 +2,7 @@
 
 import math
 from collections import deque
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 VERSION = "tactical-1"
 
@@ -39,6 +39,7 @@ class TacticalState:
     players: dict[str, PlayerState]
     uncertainty: list[str]
     feature_version: str = VERSION
+    recent_events: dict = field(default_factory=dict)
 
     def export(self) -> dict:
         return asdict(self)
@@ -124,16 +125,22 @@ def interpret(frame: dict, metadata: dict, selected_player: str | None = None) -
         selected_player,
         frame["state"] == "Active",
         clock,
-        frame.get("overtime", clock < 0 if clock is not None else None),
+        frame.get("overtime", True if clock is not None and clock < 0 else None),
         score,
         [sum(p["team"] == t for p in roster) for t in (0, 1)],
         ball,
         players,
         [
-            "Ground contact, demolitions, touches, possession and inputs are unavailable.",
+            "Ground contact, current demolition state, possession and inputs are unavailable.",
             "Height is a chassis-height proxy, not grounded-state proof.",
             "Roles are provisional depth order, not prescribed tactical responsibilities.",
         ],
+        recent_events={
+            kind: [e for e in items if frame["time"] - 2 <= e["time"] <= frame["time"]]
+            if items is not None
+            else None
+            for kind, items in metadata.get("events", {}).items()
+        },
     )
 
 

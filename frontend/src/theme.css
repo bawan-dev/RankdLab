@@ -1510,3 +1510,13 @@ p {
 .training-plan article {
   margin-top: 18px;
 }
+
+@media (max-width: 1000px) {
+  .mobile-menu.button {
+    width: 42px;
+    min-width: 42px;
+    justify-content: center;
+    right: auto;
+    padding: 10px;
+  }
+}

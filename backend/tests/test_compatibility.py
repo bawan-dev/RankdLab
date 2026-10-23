@@ -22,5 +22,7 @@ def test_additional_genuine_formats(tmp_path, filename, count, players, score):
     assert len(data["metadata"]["players"]) == players
     assert data["metadata"]["score"] == score
     assert data["frames"][0]["time"] == 0
+    assert data["adapter_version"] == "native-events-2"
+    assert {"touches", "demolitions", "boost_pads"} == set(data["events"])
     assert data["frames"][-1]["time"] > 30
     assert len({json.dumps(f["ball"]["position"]) for f in data["frames"] if f["ball"]}) > 100

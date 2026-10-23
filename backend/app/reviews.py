@@ -124,7 +124,9 @@ def register_routes(app, current_user, database, owned, config):
         frame = min(data["frames"], key=lambda f: abs(f["time"] - payload.end))
         if abs(frame["time"] - payload.end) > 0.25 or not frame["players"].get(payload.player_id):
             raise HTTPException(422, "No recorded player sample near this review timestamp")
-        state = interpret(frame, replay.metadata_json, payload.player_id)
+        state = interpret(
+            frame, {**replay.metadata_json, "events": data.get("events", {})}, payload.player_id
+        )
         review = TacticalReview(
             replay_id=replay.id,
             data={
@@ -132,6 +134,8 @@ def register_routes(app, current_user, database, owned, config):
                 "features": state.players[payload.player_id].features,
                 "feature_version": state.feature_version,
                 "sample_time": state.time,
+                "active": state.active,
+                "uncertainty": state.uncertainty,
                 "reviewer_qualification": "account_owner_not_expert_verified",
                 "review_status": "owner_review",
                 "detector_version": finding["detector_version"] if finding else None,

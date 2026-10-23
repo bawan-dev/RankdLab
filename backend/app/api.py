@@ -568,7 +568,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             else "Automatic duel coaching is not supported: all current rules require a teammate. "
             "Zero flags here indicates a coverage gap, not an assessment of your decisions."
         )
-        if replay.engine_version in (VERSION, "geometry-0.2.0"):
+        if replay.engine_version == VERSION:
             mode = replay_format(replay)
             coverage_message = (
                 "Experimental exposure and movement candidates. Possession, boost decisions "
@@ -576,6 +576,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 if mode == "1v1"
                 else "Experimental team geometry and temporal coverage rules. Rotation intent, "
                 "boost and mechanics are not assessed. Zero flags does not mean mistake-free play."
+            )
+        elif replay.engine_version == "geometry-0.2.0" and not team_supported:
+            coverage_message = (
+                "This saved analysis checked duel exposure only; temporal "
+                + "movement candidates were not available in that version."
             )
         elif not team_supported:
             recommendations = [coverage_message]

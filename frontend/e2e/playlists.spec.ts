@@ -41,6 +41,7 @@ test('three real formats, mismatch correction, isolated histories and responsive
     await expect(page.locator('.history-panel')).toContainText('1 matches');
     await page.screenshot({path:`../.research/screenshots/coach-${mode}-desktop.png`,fullPage:true});
     await page.setViewportSize({width:390,height:844});
+    await expect.poll(()=>page.locator('.sidebar').evaluate(e=>e.getBoundingClientRect().right)).toBeLessThanOrEqual(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
     await page.screenshot({path:`../.research/screenshots/coach-${mode}-mobile.png`,fullPage:true});
     await page.setViewportSize({width:1440,height:1000});
@@ -50,6 +51,7 @@ test('three real formats, mismatch correction, isolated histories and responsive
     await expect(page.locator('main h1')).toBeVisible();
     await page.screenshot({path:`../.research/screenshots/${route}-desktop.png`,fullPage:true});
     await page.setViewportSize({width:390,height:844});
+    await expect.poll(()=>page.locator('.sidebar').evaluate(e=>e.getBoundingClientRect().right)).toBeLessThanOrEqual(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
     await page.screenshot({path:`../.research/screenshots/${route}-mobile.png`,fullPage:true});
     await page.setViewportSize({width:1440,height:1000});
