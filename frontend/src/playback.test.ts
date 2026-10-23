@@ -5,15 +5,37 @@ import {
   interpolate,
   nextMoment,
   recordedSegments,
+  tacticalFraming,
   toRotation,
   toWorld,
 } from "./playback";
 import type { Actor, Frame } from "./types";
+import { PerspectiveCamera } from "three";
 const actor = (x: number): Actor => ({
   position: { x, y: 200, z: 300 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
   velocity: null,
   boost: 33,
+});
+
+test("tactical camera includes relevant positions in portrait and landscape", () => {
+  const points = [
+    { x: -3500, y: -4500, z: 20 },
+    { x: 3200, y: 3800, z: 500 },
+    { x: 0, y: 0, z: 92 },
+  ];
+  for (const aspect of [0.7, 1.8]) {
+    const { target, position } = tacticalFraming(points, aspect);
+    const camera = new PerspectiveCamera(48, aspect, 0.1, 600);
+    camera.position.copy(position);
+    camera.lookAt(target);
+    camera.updateMatrixWorld();
+    for (const point of points) {
+      const projected = toWorld(point).project(camera);
+      expect(Math.abs(projected.x)).toBeLessThan(1);
+      expect(Math.abs(projected.y)).toBeLessThan(1);
+    }
+  }
 });
 
 test("recorded trajectories split missing samples, resets, gaps and teleports", () => {

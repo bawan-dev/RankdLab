@@ -378,7 +378,12 @@ function CoachingViewer({
     setSaved(false);
   }
   function review(finding: Finding) {
-    seek(finding.time - 3);
+    seek(
+      Math.max(
+        finding.time - 8,
+        (finding.context_window?.start ?? finding.time - 2) - 1,
+      ),
+    );
     setCoach({ ...coach, phase: "context", activeId: finding.id });
     setPlaying(true);
   }
@@ -622,6 +627,22 @@ function CoachingViewer({
               </div>
             </div>
             <div className="viewer-toolbar">
+              <button
+                className="button subtle"
+                disabled={
+                  !events.some(
+                    (e) => e.time > time && !coach.reviewed.includes(e.id),
+                  )
+                }
+                onClick={() => {
+                  const next = events.find(
+                    (e) => e.time > time && !coach.reviewed.includes(e.id),
+                  );
+                  if (next) review(next);
+                }}
+              >
+                Next coaching moment
+              </button>
               <span className="camera-state" aria-live="polite">
                 {camera === "director"
                   ? active
@@ -729,6 +750,9 @@ function CoachingViewer({
                 </div>
                 <h2>{active.title}</h2>
                 <p className="coaching-explanation">{active.explanation}</p>
+                {active.uncertainty && (
+                  <p className="muted small">{active.uncertainty}</p>
+                )}
                 {active.coaching && (
                   <div className="coaching-guidance">
                     <span className="eyebrow">
@@ -747,10 +771,11 @@ function CoachingViewer({
                   <span className="eyebrow">PROPOSED ALTERNATIVE</span>
                   <p>{active.alternative}</p>
                   <small>
-                    This suggestion is not a simulated or guaranteed outcome.
+                    {active.alternative_basis ??
+                      "This suggestion is not a simulated or guaranteed outcome."}
                   </small>
                 </div>
-                <details open>
+                <details>
                   <summary>Observed evidence</summary>
                   <dl className="evidence-list">
                     {Object.entries(active.evidence).map(([key, value]) => (

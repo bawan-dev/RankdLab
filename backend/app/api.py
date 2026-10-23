@@ -15,7 +15,7 @@ from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import FileResponse, JSONResponse
 
-from app.analysis import RELIABILITY, VERSION, analyse, priorities, retreat_target
+from app.analysis import RELIABILITY, VERSION, analyse, priorities
 from app.coaching import present, snapshot, training_plan
 from app.config import ROOT, Settings
 from app.database import (
@@ -495,7 +495,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "source": "Account owner review note",
                 "source_time": frame["source_time"],
             },
-            "target": retreat_target(subject["position"], player["team"]),
+            "target": None,
+            "alternative_basis": "Manual note: no route was supplied by the reviewer.",
         }
         replay.findings = sorted([*replay.findings, finding], key=lambda f: f["time"])
         db.commit()

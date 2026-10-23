@@ -61,3 +61,17 @@ A training objective requires candidates across at least two distinct matches;
 an isolated flag cannot establish a recurring weakness. Disputed current flags
 are excluded. Sixteen rank/context/plan tests pass. Suggested drills are authored
 review exercises, not measured training outcomes or skill benchmarks.
+
+## F - tactical presentation
+
+Plan: preserve replay engine; improve framing and evidence/alternative separation.
+Camera framing fits relevant recorded positions in portrait and landscape and
+keeps a stable viewing direction. Context rewind uses available sequence bounds.
+Added Next coaching moment and neutral actor rings. Recorded paths retain gaps.
+Only supported low-ball threats receive a schematic central goal-side suggestion;
+unsupported rules and new manual notes draw no route. Detailed evidence is
+collapsed initially; uncertainty and alternative basis are visible. Eight frontend
+unit tests (including camera projection bounds), seven alternatives/legacy backend
+tests and all six genuine-browser workflows pass. The backup also needed the
+already-identified duplicate Skip link and missing CI fixture fixes; applied here
+without touching the original repository. No production coaching accuracy claim.

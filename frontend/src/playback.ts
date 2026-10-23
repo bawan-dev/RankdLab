@@ -4,6 +4,25 @@ import type { Actor, Frame, Rotation, Vec3 } from "./types";
 export function toWorld(p: Vec3): Vector3 {
   return new Vector3(p.x / 100, p.z / 100, p.y / 100);
 }
+
+export function tacticalFraming(points: Vec3[], aspect: number) {
+  const world = points.map(toWorld);
+  const center = world
+    .reduce((a, p) => a.add(p), new Vector3())
+    .divideScalar(Math.max(1, world.length));
+  const radius = Math.max(12, ...world.map((p) => p.distanceTo(center)));
+  const half = Math.min(
+    (24 * Math.PI) / 180,
+    Math.atan(Math.tan((24 * Math.PI) / 180) * Math.max(0.2, aspect)),
+  );
+  const distance = (radius / Math.sin(half)) * 1.12;
+  return {
+    target: center,
+    position: center
+      .clone()
+      .add(new Vector3(0.55, 0.9, 0.65).normalize().multiplyScalar(distance)),
+  };
+}
 export function toRotation(q: Rotation): Quaternion {
   return new Quaternion(q.x, q.z, q.y, -q.w).normalize();
 }

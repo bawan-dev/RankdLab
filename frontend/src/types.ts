@@ -63,7 +63,11 @@ export type Finding = {
   explanation: string;
   alternative: string;
   evidence: Record<string, number | string>;
-  target: Vec3;
+  target: Vec3 | null;
+  uncertainty?: string;
+  alternative_basis?: string;
+  context_window?: { start: number; end: number };
+  involved_player_ids?: string[];
   detector_version: string;
   source: "rule" | "manual";
 };

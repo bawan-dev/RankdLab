@@ -11,6 +11,7 @@ import math
 from collections import Counter
 from typing import Protocol
 
+from app.alternatives import propose
 from app.doubles_detectors import SecondManAdvance, UncoveredRecovery
 from app.playlists import classify
 from app.sequence_detectors import LastCoverAdvance, RecoveryDrift
@@ -402,6 +403,7 @@ def analyse(
                     f"{replay_id}:{key}:{time:.4f}:{VERSION}".encode()
                 ).hexdigest()[:32]
                 result["evidence"]["sustained_seconds"] = time - starts[key]
+                suggested, basis = propose(frame, player, detector.category)
                 findings.append(
                     {
                         **result,
@@ -416,9 +418,8 @@ def analyse(
                         "playlist": playlist,
                         "candidate_start": starts[key],
                         "spatial_context": {"ball": frame["ball"], "players": frame["players"]},
-                        "target": retreat_target(
-                            frame["players"][player["id"]]["position"], player["team"]
-                        ),
+                        "target": suggested,
+                        "alternative_basis": basis,
                     }
                 )
                 cooldowns[key] = time
