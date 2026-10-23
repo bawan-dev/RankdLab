@@ -78,3 +78,15 @@ def test_sampling_history_handles_unsampled_missing_frame():
         if index % 15 == 1:
             f["players"]["0-0"] = None
     assert not any(f["category"] == "duel_cover_advance" for f in analyse(data, "gaps")[0])
+
+
+@pytest.mark.parametrize(
+    "kind,category",
+    [("advance", "doubles_second_man_advance"), ("drift", "doubles_uncovered_recovery")],
+)
+def test_doubles_sequences_and_recovered_teammate_suppression(kind, category):
+    data = sequence(kind, 2)
+    assert any(f["category"] == category for f in analyse(data, "doubles")[0])
+    for frame in data["frames"]:
+        frame["players"]["0-1"] = actor(1000, -4000)
+    assert not any(f["category"] == category for f in analyse(data, "covered")[0])

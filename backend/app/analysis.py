@@ -11,6 +11,7 @@ import math
 from collections import Counter
 from typing import Protocol
 
+from app.doubles_detectors import SecondManAdvance, UncoveredRecovery
 from app.playlists import classify
 from app.sequence_detectors import LastCoverAdvance, RecoveryDrift
 from app.tactical import TemporalWindow, interpret
@@ -269,7 +270,7 @@ class DuelGoalExposure:
 DETECTORS: list[Detector] = [DoubleCommit(), DefensiveBunching(), ExposedGoal()]
 PLAYLIST_DETECTORS: dict[str, list[Detector]] = {
     "1v1": [DuelGoalExposure(), LastCoverAdvance(), RecoveryDrift()],
-    "2v2": DETECTORS,
+    "2v2": [*DETECTORS, SecondManAdvance(), UncoveredRecovery()],
     "3v3": [DefensiveBunching(), DoubleCommit(), ExposedGoal()],
 }
 

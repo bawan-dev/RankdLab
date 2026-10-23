@@ -20,7 +20,7 @@ def test_diagnostics_do_not_change_findings_and_account_for_full_replay():
     assert diagnostics["last_visited_time"] == data["frames"][-1]["time"]
     for player in data["metadata"]["players"][:2]:
         stats = diagnostics["players"][player["id"]]
-        assert set(stats) == {d.category for d in DETECTORS}
+        assert {d.category for d in DETECTORS} <= set(stats)
         assert all(s["evaluations"] > 0 for s in stats.values())
         assert sum(s["emitted"] for s in stats.values()) > 0
 

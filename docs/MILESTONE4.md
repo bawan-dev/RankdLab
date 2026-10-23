@@ -26,3 +26,16 @@ and lateral displacement. Both require a further .7 seconds of qualifying sample
 Tests cover positives, pressure/ball-direction/aerial/velocity negatives, direction
 symmetry and missing frames between sampled evaluations. No touch/blame inference.
 Existing exposure remains a separate, versioned rule. Genuine evaluation is in H.
+
+## C - Doubles roles and recovery
+
+Plan: reuse the measured sequence primitives with explicit doubles eligibility,
+not duel responsibility. Added second-man advance (requires a clear previously
+deeper position and current second-man estimate) and uncovered recovery drift
+(suppressed when the teammate covers). Existing double-commit, bunching and
+exposed-goal rules remain unchanged and separately versioned. Dynamic depth roles
+can switch or become unknown on ties; no permanent player role is stored.
+Fourteen sequence, existing-rule and diagnostic tests pass; one private test skips
+without its environment variable. Intentional support, ball moving away, aerial
+contexts and a covering teammate are negatives. Rotation intent and boost-pickup
+attribution remain unsupported.
