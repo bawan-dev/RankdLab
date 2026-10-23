@@ -21,6 +21,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, message } from "./api";
 import Arena from "./Arena";
+import { carBody } from "./carBodies";
 import ReviewWorkbench, { FindingRating } from "./ReviewWorkbench";
 import type { CameraMode } from "./Arena";
 import { continueCoaching, frameIndex, nextMoment } from "./playback";
@@ -272,6 +273,7 @@ function CoachingViewer({
         [],
     );
   const [autoPause, setAutoPause] = useState(true);
+  const [zoom, setZoom] = useState(1);
   const noteDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (manual) noteDialog.current?.showModal();
@@ -503,6 +505,7 @@ function CoachingViewer({
                 playerId={playerId}
                 camera={camera}
                 finding={active}
+                zoom={zoom}
               />
               <div className="stage-top">
                 <span className="stage-label">
@@ -536,7 +539,7 @@ function CoachingViewer({
               <div className="stage-bottom">
                 <span>
                   <span className="team-dot" />
-                  {player?.name}
+                  {player?.name} · {player ? carBody(player).name : ""}
                 </span>
                 <span>
                   {active
@@ -628,6 +631,35 @@ function CoachingViewer({
               </div>
             </div>
             <div className="viewer-toolbar">
+              <label className="replay-zoom">
+                Camera zoom
+                <input
+                  aria-label="Camera zoom"
+                  type="range"
+                  min="0.6"
+                  max="2.4"
+                  step="0.05"
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  disabled={camera === "free"}
+                />
+              </label>
+              <button
+                className="button subtle"
+                onClick={() => {
+                  setZoom(1);
+                  setCamera("director");
+                }}
+              >
+                Reset camera
+              </button>
+              {camera === "free" && (
+                <p className="camera-hint">
+                  Drag to orbit ? Right-drag to pan ? Scroll to zoom. Focus the
+                  arena and use arrow keys to pan.
+                </p>
+              )}
+
               <button
                 className="button subtle"
                 disabled={
@@ -658,7 +690,8 @@ function CoachingViewer({
                   value={camera}
                   onChange={(e) => setCamera(e.target.value as CameraMode)}
                 >
-                  <option value="director">Coaching director</option>
+                  <option value="director">Follow the play</option>
+                  <option value="free">Free orbit / inspect</option>
                   <option value="overhead">Tactical overhead</option>
                   <option value="perspective">Elevated perspective</option>
                   <option value="ball">Follow ball</option>

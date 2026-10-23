@@ -29,6 +29,11 @@ def actor(frame: Any) -> dict | None:
         "position": p,
         "rotation": q,
         "velocity": body.get("linear_velocity"),
+        # Retain replicated component states. Missing is unknown, never an inferred action.
+        "boost_active": data.get("boost_active"),
+        "jump_active": data.get("jump_active"),
+        "double_jump_active": data.get("double_jump_active"),
+        "dodge_active": data.get("dodge_active"),
         "boost": min(100, max(0, data["boost_amount"] * 100 / 255))
         if data.get("boost_amount") is not None
         else None,
@@ -57,6 +62,8 @@ def normalize(raw: dict, names: list[str], game_type: str) -> dict:
                     "id": player_key(player["remote_id"]),
                     "name": player["name"],
                     "team": team,
+                    "car_body_id": player.get("car_body_id"),
+                    "car_hitbox_family": player.get("car_hitbox_family"),
                     "stats": {
                         k.lower(): stats.get(k)
                         for k in ("Goals", "Assists", "Saves", "Shots", "Score")
@@ -136,7 +143,7 @@ def normalize(raw: dict, names: list[str], game_type: str) -> dict:
     return {
         "schema_version": 1,
         "parser_version": PARSER_VERSION,
-        "adapter_version": "native-events-2",
+        "adapter_version": "native-actions-3",
         "events": events,
         "metadata": {
             "classification": classify({"players": players}, headers),
