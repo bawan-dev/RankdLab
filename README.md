@@ -103,3 +103,9 @@ No code has been pushed or publicly deployed, and billing is not enabled.
 
 RankdLab is not affiliated with or endorsed by Psyonix or Epic Games. Rocket League
 and its trademarks belong to their respective owners.
+
+
+Milestone 4 backup implementation: see [local handoff](docs/MILESTONE4.md),
+[tactical architecture](docs/COACHING_ARCHITECTURE.md), [detector catalog](docs/DETECTOR_CATALOG.md)
+and [evaluation status](docs/EVALUATION.md). Added candidates remain unvalidated
+heuristics; no trained production coaching model or accuracy claim is made.

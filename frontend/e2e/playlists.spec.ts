@@ -21,6 +21,18 @@ test('three real formats, mismatch correction, isolated histories and responsive
     await expect(page.getByRole('heading',{name:'Who are you in this match?'})).toBeVisible({timeout:45000});
     await page.locator('.player-option').first().click();
     await expect(page.getByRole('img',{name:'3D reconstruction of recorded replay positions'})).toBeVisible();
+    await page.getByLabel('Replay timeline').fill('20');
+    await page.getByText('Review or correct a tactical situation',{exact:true}).click();
+    await page.getByRole('button',{name:'Use current moment'}).click();
+    await page.getByLabel('Reviewer explanation').fill('QA owner review of genuine recorded data; uncertainty retained.');
+    await page.getByRole('button',{name:'Save tactical review',exact:true}).click();
+    await expect(page.getByText('Tactical review saved.',{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Open reviewed situation',exact:true}).click();
+    await expect(page.getByText('Paused for review',{exact:true})).toBeVisible();
+    await page.getByLabel('Finding usefulness').selectOption('unsure');
+    await expect(page.getByText('Feedback saved. This is not an objective review label.')).toBeVisible();
+    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await page.getByRole('button',{name:'Pause replay',exact:true}).click();
     await page.getByRole('link',{name:'Match report'}).click();
     await expect(page.getByRole('heading',{name:'Match coaching report'})).toBeVisible();
     await expect(page.locator('.report-context')).toContainText(mode);
@@ -29,6 +41,7 @@ test('three real formats, mismatch correction, isolated histories and responsive
     await expect(page.locator('.history-panel')).toContainText('1 matches');
     await page.screenshot({path:`../.research/screenshots/coach-${mode}-desktop.png`,fullPage:true});
     await page.setViewportSize({width:390,height:844});
+    await expect.poll(()=>page.locator('.sidebar').evaluate(e=>e.getBoundingClientRect().right)).toBeLessThanOrEqual(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
     await page.screenshot({path:`../.research/screenshots/coach-${mode}-mobile.png`,fullPage:true});
     await page.setViewportSize({width:1440,height:1000});
@@ -38,6 +51,7 @@ test('three real formats, mismatch correction, isolated histories and responsive
     await expect(page.locator('main h1')).toBeVisible();
     await page.screenshot({path:`../.research/screenshots/${route}-desktop.png`,fullPage:true});
     await page.setViewportSize({width:390,height:844});
+    await expect.poll(()=>page.locator('.sidebar').evaluate(e=>e.getBoundingClientRect().right)).toBeLessThanOrEqual(0);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
     await page.screenshot({path:`../.research/screenshots/${route}-mobile.png`,fullPage:true});
     await page.setViewportSize({width:1440,height:1000});

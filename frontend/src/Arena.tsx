@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import type { Finding, ReplayData } from "./types";
-import { frameIndex, interpolate, toWorld, recordedSegments } from "./playback";
+import {
+  frameIndex,
+  interpolate,
+  toWorld,
+  recordedSegments,
+  tacticalFraming,
+} from "./playback";
 
 export type CameraMode =
   "director" | "overhead" | "perspective" | "ball" | "player" | "aerial";
@@ -251,13 +257,30 @@ export default function Arena(props: Props) {
       )) {
         line(segment.map(toWorld), "#ffd88c", annotations);
       }
+      const sample = data.frames[frameIndex(data.frames, finding.time)];
+      for (const id of finding.involved_player_ids ??
+        Object.keys(sample.players)) {
+        const actor = sample.players[id];
+        if (!actor) continue;
+        const marker = new THREE.Mesh(
+          new THREE.RingGeometry(1.6, 2, 28),
+          new THREE.MeshBasicMaterial({
+            color: "#c1d9ed",
+            side: THREE.DoubleSide,
+          }),
+        );
+        marker.rotation.x = -Math.PI / 2;
+        marker.position.copy(toWorld(actor.position));
+        marker.position.y += 0.3;
+        annotations.add(marker);
+      }
       const at =
         data.frames[frameIndex(data.frames, finding.time)].players[
           finding.player_id
         ];
       if (at) {
         const start = toWorld(at.position).add(new THREE.Vector3(0, 0.5, 0));
-        const destination = toWorld(finding.target).add(
+        const destination = toWorld(finding.target ?? at.position).add(
           new THREE.Vector3(0, 0.5, 0),
         );
         const delta = destination.clone().sub(start);
@@ -394,10 +417,16 @@ export default function Arena(props: Props) {
         position.copy(target).add(new THREE.Vector3(55, 26, 50));
       }
       if (effective === "challenge" && finding) {
-        const subject = cars.get(finding.player_id);
-        if (subject)
-          target.copy(subject.position).add(ball.position).multiplyScalar(0.5);
-        position.copy(target).add(new THREE.Vector3(55, 90, 60));
+        const frame = data.frames[frameIndex(data.frames, time)];
+        const ids =
+          finding.involved_player_ids ?? data.metadata.players.map((p) => p.id);
+        const points = ids.flatMap((id) =>
+          frame.players[id] ? [frame.players[id]!.position] : [],
+        );
+        if (frame.ball) points.push(frame.ball.position);
+        const framing = tacticalFraming(points, camera.aspect);
+        target.copy(framing.target);
+        position.copy(framing.position);
       }
       const easing = window.matchMedia("(prefers-reduced-motion: reduce)")
         .matches

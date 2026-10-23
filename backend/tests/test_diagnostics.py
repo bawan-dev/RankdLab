@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from test_analysis import data_for, scenario
 
-from app.analysis import DETECTORS, analyse
+from app.analysis import DETECTORS, PLAYLIST_DETECTORS, analyse
 from app.middleware import JsonFormatter
 from app.worker import run_parser
 
@@ -20,7 +20,7 @@ def test_diagnostics_do_not_change_findings_and_account_for_full_replay():
     assert diagnostics["last_visited_time"] == data["frames"][-1]["time"]
     for player in data["metadata"]["players"][:2]:
         stats = diagnostics["players"][player["id"]]
-        assert set(stats) == {d.category for d in DETECTORS}
+        assert {d.category for d in DETECTORS} <= set(stats)
         assert all(s["evaluations"] > 0 for s in stats.values())
         assert sum(s["emitted"] for s in stats.values()) > 0
 
@@ -30,8 +30,10 @@ def test_duel_runs_only_its_own_detector():
     data["metadata"]["players"] = [data["metadata"]["players"][0], data["metadata"]["players"][2]]
     diagnostics = {}
     assert analyse(data, "duel", diagnostics)[0] == []
-    assert diagnostics["detectors"] == ["duel_goal_exposure"]
-    assert all(set(stats) == {"duel_goal_exposure"} for stats in diagnostics["players"].values())
+    assert diagnostics["detectors"] == [d.category for d in PLAYLIST_DETECTORS["1v1"]]
+    assert all(
+        set(stats) == set(diagnostics["detectors"]) for stats in diagnostics["players"].values()
+    )
 
 
 def test_structured_log_retains_diagnostics():

@@ -11,9 +11,14 @@ import math
 from collections import Counter
 from typing import Protocol
 
+from app.alternatives import propose
+from app.doubles_detectors import SecondManAdvance, UncoveredRecovery
 from app.playlists import classify
+from app.sequence_detectors import LastCoverAdvance, RecoveryDrift
+from app.standard_detectors import CentralCoverageGap, ThirdManAdvance
+from app.tactical import TemporalWindow, interpret
 
-VERSION = "geometry-0.2.0"
+VERSION = "tactical-0.4.0"
 RELIABILITY = "Experimental, uncalibrated heuristic; not evaluated by qualified coaches"
 
 
@@ -266,9 +271,15 @@ class DuelGoalExposure:
 # Existing team geometry stays unchanged. Registry determines eligibility, not rank.
 DETECTORS: list[Detector] = [DoubleCommit(), DefensiveBunching(), ExposedGoal()]
 PLAYLIST_DETECTORS: dict[str, list[Detector]] = {
-    "1v1": [DuelGoalExposure()],
-    "2v2": DETECTORS,
-    "3v3": [DefensiveBunching(), DoubleCommit(), ExposedGoal()],
+    "1v1": [DuelGoalExposure(), LastCoverAdvance(), RecoveryDrift()],
+    "2v2": [*DETECTORS, SecondManAdvance(), UncoveredRecovery()],
+    "3v3": [
+        DefensiveBunching(),
+        DoubleCommit(),
+        ExposedGoal(),
+        ThirdManAdvance(),
+        CentralCoverageGap(),
+    ],
 }
 
 
@@ -295,10 +306,19 @@ def analyse(
         frames=Counter(),
         players={},
     )
+    history = TemporalWindow()
+    interpretation_metadata = {**data["metadata"], "events": data.get("events", {})}
     for frame in data["frames"]:
         time = frame["time"]
         audit["frames"]["visited"] += 1
         audit["last_visited_time"] = time
+        continuous = history.push(frame, players)
+        if history.reason:
+            audit["frames"][history.reason] += 1
+            if history.reason != "duplicate_timestamp":
+                starts.clear()
+        if history.reason == "duplicate_timestamp":
+            continue
         if frame["state"] != "Active":
             audit["frames"]["non_active"] += 1
             starts.clear()
@@ -317,6 +337,9 @@ def analyse(
         if time - active_since < 4:
             audit["frames"]["kickoff_context_excluded"] += 1
             continue
+        if not continuous:
+            audit["frames"]["missing_actor"] += 1
+            continue
         if time - last_sample < 0.18:
             audit["frames"]["sampling_skipped"] += 1
             continue
@@ -326,6 +349,7 @@ def analyse(
             starts.clear()
             continue
         audit["frames"]["sampled_complete"] += 1
+        state = interpret(frame, interpretation_metadata)
         for player in players:
             teammates = [
                 frame["players"][p["id"]]
@@ -354,7 +378,14 @@ def analyse(
                     )
                 )
                 stats["evaluations"] += 1
-                result = detector.evaluate(frame, player, teammates, opponents, stats["rejections"])
+                if hasattr(detector, "evaluate_window"):
+                    result = detector.evaluate_window(
+                        state, history, player["id"], stats["rejections"]
+                    )
+                else:
+                    result = detector.evaluate(
+                        frame, player, teammates, opponents, stats["rejections"]
+                    )
                 if not result:
                     starts.pop(key, None)
                     continue
@@ -373,6 +404,7 @@ def analyse(
                     f"{replay_id}:{key}:{time:.4f}:{VERSION}".encode()
                 ).hexdigest()[:32]
                 result["evidence"]["sustained_seconds"] = time - starts[key]
+                suggested, basis = propose(frame, player, detector.category)
                 findings.append(
                     {
                         **result,
@@ -383,13 +415,12 @@ def analyse(
                         "category": detector.category,
                         "source": "rule",
                         "reliability": RELIABILITY,
-                        "detector_version": VERSION,
+                        "detector_version": getattr(detector, "version", "geometry-0.2.0"),
                         "playlist": playlist,
                         "candidate_start": starts[key],
                         "spatial_context": {"ball": frame["ball"], "players": frame["players"]},
-                        "target": retreat_target(
-                            frame["players"][player["id"]]["position"], player["team"]
-                        ),
+                        "target": suggested,
+                        "alternative_basis": basis,
                     }
                 )
                 cooldowns[key] = time
@@ -417,7 +448,10 @@ def priorities(findings: list[dict]) -> tuple[str | None, list[str]]:
     }
     return (
         counts.most_common(1)[0][0] if counts else None,
-        [suggestions[k] for k, _ in counts.most_common(3)]
+        [
+            suggestions.get(k, "Review " + k.replace("_", " ") + " in its recorded context.")
+            for k, _ in counts.most_common(3)
+        ]
         or [
             (
                 "Review your match in context. Current rules found no qualifying "

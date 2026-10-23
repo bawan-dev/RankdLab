@@ -63,7 +63,11 @@ export type Finding = {
   explanation: string;
   alternative: string;
   evidence: Record<string, number | string>;
-  target: Vec3;
+  target: Vec3 | null;
+  uncertainty?: string;
+  alternative_basis?: string;
+  context_window?: { start: number; end: number };
+  involved_player_ids?: string[];
   detector_version: string;
   source: "rule" | "manual";
 };
@@ -89,7 +93,12 @@ export type Replay = {
   session_time: number;
   reviewed_ids: string[];
   engine_version: string;
-  feedback?: { finding_id: string; inaccurate: boolean; note: string }[];
+  feedback?: {
+    finding_id: string;
+    inaccurate: boolean;
+    note: string;
+    rating?: string | null;
+  }[];
 };
 export type ReplayData = {
   schema_version: number;

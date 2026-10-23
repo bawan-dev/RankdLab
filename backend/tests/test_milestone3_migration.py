@@ -42,7 +42,7 @@ def test_milestone3_upgrade_preserves_legacy_accounts_and_reports(tmp_path):
     with engine.connect() as connection:
         tables = set(inspect(connection).get_table_names())
         assert {"users", "replays", "rocket_profiles", "rank_history"} <= tables
-        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "m3_profiles"
+        assert connection.scalar(text("SELECT version_num FROM alembic_version")) == "m4_reviews"
         assert (
             connection.scalar(text("SELECT display_name FROM users WHERE id='legacy-user'"))
             == "Fixture"

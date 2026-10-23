@@ -21,6 +21,7 @@ import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, message } from "./api";
 import Arena from "./Arena";
+import ReviewWorkbench, { FindingRating } from "./ReviewWorkbench";
 import type { CameraMode } from "./Arena";
 import { continueCoaching, frameIndex, nextMoment } from "./playback";
 import type { CoachingState } from "./playback";
@@ -378,7 +379,12 @@ function CoachingViewer({
     setSaved(false);
   }
   function review(finding: Finding) {
-    seek(finding.time - 3);
+    seek(
+      Math.max(
+        finding.time - 8,
+        (finding.context_window?.start ?? finding.time - 2) - 1,
+      ),
+    );
     setCoach({ ...coach, phase: "context", activeId: finding.id });
     setPlaying(true);
   }
@@ -622,6 +628,22 @@ function CoachingViewer({
               </div>
             </div>
             <div className="viewer-toolbar">
+              <button
+                className="button subtle"
+                disabled={
+                  !events.some(
+                    (e) => e.time > time && !coach.reviewed.includes(e.id),
+                  )
+                }
+                onClick={() => {
+                  const next = events.find(
+                    (e) => e.time > time && !coach.reviewed.includes(e.id),
+                  );
+                  if (next) review(next);
+                }}
+              >
+                Next coaching moment
+              </button>
               <span className="camera-state" aria-live="polite">
                 {camera === "director"
                   ? active
@@ -729,6 +751,9 @@ function CoachingViewer({
                 </div>
                 <h2>{active.title}</h2>
                 <p className="coaching-explanation">{active.explanation}</p>
+                {active.uncertainty && (
+                  <p className="muted small">{active.uncertainty}</p>
+                )}
                 {active.coaching && (
                   <div className="coaching-guidance">
                     <span className="eyebrow">
@@ -747,10 +772,11 @@ function CoachingViewer({
                   <span className="eyebrow">PROPOSED ALTERNATIVE</span>
                   <p>{active.alternative}</p>
                   <small>
-                    This suggestion is not a simulated or guaranteed outcome.
+                    {active.alternative_basis ??
+                      "This suggestion is not a simulated or guaranteed outcome."}
                   </small>
                 </div>
-                <details open>
+                <details>
                   <summary>Observed evidence</summary>
                   <dl className="evidence-list">
                     {Object.entries(active.evidence).map(([key, value]) => (
@@ -776,6 +802,15 @@ function CoachingViewer({
                     Continue <ArrowRight size={15} />
                   </button>
                 </div>
+                <FindingRating
+                  key={active.id}
+                  replayId={replay.id}
+                  finding={active}
+                  initialRating={
+                    replay.feedback?.find((f) => f.finding_id === active.id)
+                      ?.rating
+                  }
+                />
                 <button
                   className={`feedback-button ${noted.includes(active.id) ? "is-noted" : ""}`}
                   disabled={feedbackBusy}
@@ -849,6 +884,30 @@ function CoachingViewer({
           </aside>
         </div>
       )}
+      {playerId && (
+        <ReviewWorkbench
+          key={playerId}
+          replay={replay}
+          playerId={playerId}
+          time={time}
+          active={active}
+          onUpdate={onUpdate}
+          onOpen={(r) => {
+            const f = events.find(
+              (e) =>
+                e.id === r.finding_id ||
+                (e.source === "manual" &&
+                  e.category === r.category &&
+                  e.time === r.end),
+            );
+            if (f) review(f);
+            else {
+              setPlaying(false);
+              seek(r.end);
+            }
+          }}
+        />
+      )}
       {manual && (
         <dialog
           ref={noteDialog}
@@ -869,8 +928,8 @@ function CoachingViewer({
             </p>
             <h2 id="note-title">What deserves another look?</h2>
             <p>
-              Your note will pause the replay and show a suggested retreat arrow
-              toward your own half.
+              Your note will pause the replay for review. No alternative route
+              is inferred from a written note.
             </p>
             <label>
               Title
