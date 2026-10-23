@@ -258,13 +258,6 @@ export default function ProfilePage({
             : "Your ranks. Your context."
         }
         description="Optional, self-reported ranks shape explanations. They never change what the replay shows."
-        action={
-          onboarding ? (
-            <Link to="/dashboard" className="button subtle">
-              Skip for now <ChevronRight size={16} />
-            </Link>
-          ) : undefined
-        }
       />
       <ErrorMessage error={loadError || error} />
       {!profile ? (

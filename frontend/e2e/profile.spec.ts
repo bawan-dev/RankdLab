@@ -7,6 +7,7 @@ test('onboarding saves independent self-reported ranks and update history', asyn
   await page.getByLabel('Password', {exact:true}).fill('disposable-local-qa-password');
   await page.getByRole('button', {name:'Create account',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Make this your coaching space.'})).toBeVisible();
+  await expect(page.getByRole('link',{name:'Skip for now',exact:true})).toHaveCount(1);
   await page.getByLabel('Rocket League display username').fill('Busiest');
   await page.getByLabel('Gaming platform (optional)').selectOption('PC');
   const duel = page.getByRole('form',{name:'1v1 rank'});
