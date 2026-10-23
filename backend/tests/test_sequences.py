@@ -90,3 +90,21 @@ def test_doubles_sequences_and_recovered_teammate_suppression(kind, category):
     for frame in data["frames"]:
         frame["players"]["0-1"] = actor(1000, -4000)
     assert not any(f["category"] == category for f in analyse(data, "covered")[0])
+
+
+def test_standard_third_man_and_central_gap_with_multiple_formations():
+    data = sequence(mode=3)
+    assert any(f["category"] == "standard_third_man_advance" for f in analyse(data, "third")[0])
+    for f in data["frames"]:
+        f["players"]["0-1"] = actor(1000, -4500)
+    assert not any(f["category"] == "standard_third_man_advance" for f in analyse(data, "cover")[0])
+    for f in data["frames"]:
+        f["players"].update(
+            {"0-0": actor(2500, -3500), "0-1": actor(-2500, -2500), "0-2": actor(2000, -500)}
+        )
+    assert any(f["category"] == "standard_central_coverage_gap" for f in analyse(data, "wide")[0])
+    for f in data["frames"]:
+        f["players"]["0-0"] = actor(0, -3500)
+    assert not any(
+        f["category"] == "standard_central_coverage_gap" for f in analyse(data, "central")[0]
+    )

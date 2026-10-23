@@ -39,3 +39,14 @@ Fourteen sequence, existing-rule and diagnostic tests pass; one private test ski
 without its environment variable. Intentional support, ball moving away, aerial
 contexts and a covering teammate are negatives. Rotation intent and boost-pickup
 attribution remain unsupported.
+
+## D - Standard structure
+
+Plan: interpret third-man responsibility and a separate central coverage gap.
+Added third-man advance, requiring both other players to have been ahead in the
+prior two seconds, and central coverage gap, requiring three sustained wide low
+positions under a central goalward threat. Only a clear deepest player receives
+the team-level observation, without causal blame. A central defender suppresses
+the gap; an additional covering player suppresses advance. Twelve sequence and
+legacy-detector tests pass, including different formations. Challenge sequencing,
+rotation intent and aerial defensive coverage remain beyond these candidates.

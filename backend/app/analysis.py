@@ -14,6 +14,7 @@ from typing import Protocol
 from app.doubles_detectors import SecondManAdvance, UncoveredRecovery
 from app.playlists import classify
 from app.sequence_detectors import LastCoverAdvance, RecoveryDrift
+from app.standard_detectors import CentralCoverageGap, ThirdManAdvance
 from app.tactical import TemporalWindow, interpret
 
 VERSION = "tactical-0.4.0"
@@ -271,7 +272,13 @@ DETECTORS: list[Detector] = [DoubleCommit(), DefensiveBunching(), ExposedGoal()]
 PLAYLIST_DETECTORS: dict[str, list[Detector]] = {
     "1v1": [DuelGoalExposure(), LastCoverAdvance(), RecoveryDrift()],
     "2v2": [*DETECTORS, SecondManAdvance(), UncoveredRecovery()],
-    "3v3": [DefensiveBunching(), DoubleCommit(), ExposedGoal()],
+    "3v3": [
+        DefensiveBunching(),
+        DoubleCommit(),
+        ExposedGoal(),
+        ThirdManAdvance(),
+        CentralCoverageGap(),
+    ],
 }
 
 
